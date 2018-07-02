@@ -1,0 +1,11 @@
+PYTHONENV  = PYTHONPATH=..
+PYTHON     = python3
+tests	   = headers_test.py csvfile_test.py
+
+.PHONY: test
+test: $(tests)
+	for f in $(tests); do \
+	  echo Running $$f: ; \
+	  $(PYTHONENV) $(PYTHON) $$f ; \
+	done
+
