@@ -11,7 +11,7 @@ class ConflictError(Exception):
 class UnhandledError(Exception):
     pass
 
-def choose3(LCAval, Aval, Bval, allow_conflict = True):
+def choose3(LCAval, Aval, Bval, allow_conflict = False):
     """
     Given three arbitrary values representing some property of the LCA
     and A/B branches, choose an appropriate output value.
@@ -88,6 +88,26 @@ def merge3_next(state):
         state.advance_all()
         return
         
+    # One more all-the-same test... if the LCA and A lines are the
+    # same, and B is the same *logical* contents but has reformatted
+    # the fields, then just use the line from A.
+
+    if text_LCA == text_A and \
+       state.cursor_LCA[0].row == state.cursor_B[0].row:
+        state.stream.write(text_A)
+        state.advance_all()
+        return
+
+    # And final all-the-same test... if the same reformatting is
+    # present on both A and B sides, and the logical content is
+    # unchanged, then apply the reformatting.
+
+    if text_A == text_B and \
+       state.cursor_LCA[0].row == state.cursor_A[0].row:
+        state.stream.write(text_A)
+        state.advance_all()
+        return
+
     # Otherwise, we do an intelligent 3-way merge on the current state
 
     # First, we need to know the keys of each line
@@ -108,22 +128,73 @@ def merge3_next(state):
         state.advance_all()
         return
 
-    raise UnhandledError
+    # Now the real work starts: figure how to handle the many, various
+    # possibilities where the next lines in each source file may have
+    # different keys.
+
+    # First: do files A and B have the same next key?  If so, we have
+    # a change that is common across both branch paths.
+
+    if key_A == key_B:
+        return merge_one_changed_AB(state, key_LCA, key_A)
+
+    # Files LCA and B have the same next key but A is different?
+
+    if key_LCA == key_B:
+        return merge_one_changed_A(state, key_LCA, key_A)
+
+    # Files LCA and a have the same next key but B is different?
+
+    if key_LCA == key_A:
+        return merge_one_changed_B(state, key_LCA, key_B)
+
+    # Next keys are different in all 3 files
+
+    return merge_one_all_different(state, key_LCA, key_A, key_B)
+
+def merge_one_changed_AB(state, key_LCA, key_A):
+    return UnhandledError
+
+def merge_one_changed_A(state, key_LCA, key_A):
+    return UnhandledError
+
+def merge_one_changed_B(state, key_LCA, key_B):
+    return UnhandledError
+
+def merge_one_all_different(state, key_LCA, key_A, key_B):
+    return UnhandledError
 
 def lookup_field(line, column):
+    """
+    Lookup the value of a given (numbered) column in a given Line
+    """
     if column == None:
         return None
     return line.row[column]
     
 def merge_one_line(state, line_LCA, line_A, line_B):
+    """
+    Perform field-by-field merging of LCA, A and B versions of a given
+    line, sharing a common primary key.
+
+    Any or all of the files may be missing a value for one or more
+    fields, in which case an empty string is used for those fields.
+    """
+
     # do field-by-field merging
     row = []
     for map in state.headers.header_map:
+        # The header_map maps columns in the output to the correct
+        # columns in the various source files
         value_LCA = lookup_field(line_LCA, map.LCA_column)
         value_A = lookup_field(line_A, map.A_column)
         value_B = lookup_field(line_B, map.B_column)
 
-        value = choose3(value_LCA, value_A, value_B)
+        try:
+            value = choose3(value_LCA, value_A, value_B)
+        except ConflictError:
+            # Need to emit a conflict marker in the output here
+            raise UnhandledError
 
         if value == None:
             value = ""
@@ -132,22 +203,15 @@ def merge_one_line(state, line_LCA, line_A, line_B):
 
     state.writer.writerow(row)
 
-@click.command()
-
-@click.argument("filename_LCA", type=click.File("rt"))
-@click.argument("filename_A", type=click.File("rt"))
-@click.argument("filename_B", type=click.File("rt"))
-@click.option("-k", "--key", required=True)
-
-def merge3(filename_lca, filename_a, filename_b, key):
+def merge3(file_lca, file_a, file_b, key, output = sys.stdout):
     """
     Perform a full 3-way merge on 3 given CSV files, using the given
     column name as a primary key.
     """
 
-    file_LCA = CSVFile(filename_lca, key=key)
-    file_A = CSVFile(filename_a, key=key)
-    file_B = CSVFile(filename_b, key=key)
+    file_LCA = CSVFile(file_lca, key=key)
+    file_A = CSVFile(file_a, key=key)
+    file_B = CSVFile(file_b, key=key)
 
     headers = Headers(file_LCA.header.row,
                       file_A.header.row,
@@ -157,11 +221,10 @@ def merge3(filename_lca, filename_a, filename_b, key):
     # just preserve the dialect of the A-side (usually, mainline)
     # branch file
 
-    dialect = file_A.dialect()
-
-    stream = sys.stdout
-    
-    writer = csv.writer(sys.stdout, dialect=dialect)
+    dialect = csv.Sniffer().sniff(file_A.header.text)
+    # The reader ignores line-terminators, so force that to unix-style by default
+    dialect.lineterminator = "\n"
+    writer = csv.writer(output, dialect=dialect)
 
     # If all three input files have the exact same header text, then
     # output the header as that text verbatim;
@@ -169,16 +232,30 @@ def merge3(filename_lca, filename_a, filename_b, key):
     # otherwise, we output the intelligent merge of the differences
 
     if file_LCA.header.text == file_A.header.text == file_B.header.text:
-        stream.write(file_A.header.text)
+        output.write(file_A.header.text)
     else:
         writer.writerow(headers.headers)
 
     # Initialise the merging state
     
-    state = __State(file_LCA, file_A, file_B, headers, stream, writer)
+    state = __State(file_LCA, file_A, file_B, headers, output, writer)
 
     while not state.EOF():
         merge3_next(state)
 
+    state.cursor_LCA.assert_finished()
+    state.cursor_A.assert_finished()
+    state.cursor_B.assert_finished()
+
+@click.command()
+
+@click.argument("filename_LCA", type=click.File("rt"))
+@click.argument("filename_A", type=click.File("rt"))
+@click.argument("filename_B", type=click.File("rt"))
+@click.option("-k", "--key", required=True)
+
+def merge3_cli(filename_lca, filename_a, filename_b, key):
+    merge3(filename_lca, filename_a, filename_b, key)
+
 if __name__ == "__main__":
-    merge3()
+    merge3_cli()

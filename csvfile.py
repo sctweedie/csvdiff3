@@ -148,7 +148,11 @@ class Cursor:
 
         # Start processing the file at line 2, ie. the first
         # non-header line.
-        self.linenr = 2;
+        self.linenr = 2
+
+        # Maintain a backlog of Lines that we know we will need later
+        # on from some file
+        self.backlog = OrderedDict()
 
     def __getitem__(self, offset):
         """
@@ -188,3 +192,32 @@ class Cursor:
 
     def EOF(self):
         return self.linenr > self.file.last_line
+
+    def assert_finished(self):
+        assert self.EOF()
+        assert not self.backlog
+
+    def move_to_backlog(self):
+        """
+        Move the current Line to the backlog for later lookup.
+
+        Automatically advances to the next line position.
+        """
+        assert not key in self.backlog
+        self.backlog[self.current_key()] = getline(0)
+        self.advance()
+
+    def find_next_match(self, key):
+        """
+        Find the next Line matching a given key, to help find
+        out-of-order matches between lines in the files.
+
+        Searches the backlog first, then searches forward for the next
+        match.
+        """
+        if key in self.backlog:
+            return self.backlog.pop(key)
+
+        if not key in self.file.lines_by_key:
+            return None
+        return self.file.lines_by_key[key].pop[0]
