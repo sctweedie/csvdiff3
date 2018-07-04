@@ -124,48 +124,12 @@ def merge3_next(state):
 
 def merge_same_keys(state, key_LCA):
     """
-    All three branches have the same next key.  If some of the lines
-    match exactly, then we may want to output the lines' text
-    verbatim; otherwise we go to a field-by-field merge and risk
-    reformatting some fields.
+    All three branches have the same next key.
     """
 
-    text_LCA = state.cursor_LCA[0].text
-    text_A = state.cursor_A[0].text
-    text_B = state.cursor_B[0].text
-
-    # First, check if the next line of each input file has the exact
-    # same text.  If they are all the same, then that is our next
-    # output line
-    if text_LCA == text_A == text_B:
-        logging.debug("  Writing exact text: %s" % text_A[0:-1])
-        state.stream.write(text_A)
-        state.advance_all()
-        return
-
-    # One more all-the-same test... if the LCA and A lines are the
-    # same, and B is the same *logical* contents but has reformatted
-    # the fields, then just use the line from A.
-
-    if text_LCA == text_A and \
-       state.cursor_LCA[0].row == state.cursor_B[0].row:
-        logging.debug("  Writing exact text: %s" % text_A[0:-1])
-        state.stream.write(text_A)
-        state.advance_all()
-        return
-
-    # And final all-the-same test... if the same reformatting is
-    # present on both A and B sides, and the logical content is
-    # unchanged, then apply the reformatting.
-
-    if text_A == text_B and \
-       state.cursor_LCA[0].row == state.cursor_A[0].row:
-        logging.debug("  Writing exact text: %s" % text_A[0:-1])
-        state.stream.write(text_A)
-        state.advance_all()
-        return
-
-    # Otherwise, we do an intelligent 3-way merge on the current state
+    # This is the simplest case, with no special cases: perform an
+    # intelligent 3-way merge on the current state and move to the
+    # next line.
 
     merge_one_line(state,
                    state.cursor_LCA[0],
@@ -246,6 +210,26 @@ def lookup_field(line, column):
         return None
     return line.row[column]
 
+def changed_line_is_compatible(before, after):
+    """
+    Test whether two versions of a Line are in conflict or not.  If
+    either is None, then there is no conflict; otherwise we need to
+    compare contents.
+    """
+    if not before:
+        return True
+    if not after:
+        return True
+    # It's faster to compare the whole line as a single string, and
+    # most of the time this will get us the right answer
+    if before.text == after.text:
+        return True
+    # but if the text mismatches, we still have to compare the decoded
+    # fields one by one
+    if before.row == after.row:
+        return True
+    return False
+
 def merge_one_line(state, line_LCA, line_A, line_B):
     """
     Perform field-by-field merging of LCA, A and B versions of a given
@@ -257,6 +241,20 @@ def merge_one_line(state, line_LCA, line_A, line_B):
 
     logging.debug("  Action: merge_one_line(LCA %s, A %s, B %s)" %
                   (format(line_LCA), format(line_A), format(line_B)))
+
+    # First, check if the corresponding lines of each input file have
+    # the exact same text.  If they are all the same, then that is our
+    # next output line, and we will avoid reformatting.
+
+    if changed_line_is_compatible(line_LCA, line_A) and \
+       changed_line_is_compatible(line_LCA, line_B) and \
+       changed_line_is_compatible(line_A, line_B):
+
+        out_text = (line_A or line_B).text
+        # Log the output without line-terminator
+        logging.debug("  Writing exact text: %s" % out_text[0:-1])
+        state.stream.write(out_text)
+        return
 
     # do field-by-field merging
     row = []

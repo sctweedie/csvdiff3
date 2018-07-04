@@ -6,6 +6,14 @@ import filecmp
 
 import csvmerge3
 
+class Debug:
+    # Set this true to disable all tests; a single test can then be
+    # manually enabled for debugging purposes.
+    #
+    # (Reduces clutter in the debug log file.)
+
+    skip_tests = False
+
 def merge3_named(filename_LCA, filename_A, filename_B,
                  filename_output, key):
     with open(filename_LCA, "rt") as file_LCA, \
@@ -67,6 +75,7 @@ class TestFormatting(MergeTest):
     such as quoting changes between files.
     """
 
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
     def test_no_change(self):
         """
         Test that a merge between 3 equal files results in the extact
@@ -77,6 +86,7 @@ class TestFormatting(MergeTest):
                      self.file_fully_quoted]:
             self.run_and_compare(file, file, file, file, "name")
 
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
     def test_reformat_both_sides(self):
         """
         Test a merge that changes the format (eg. quoting) on both
@@ -88,18 +98,20 @@ class TestFormatting(MergeTest):
                              self.file_partially_quoted,
                              "name")
 
+    #@unittest.skipIf(Debug.skip_tests, "skipping for debug")
     def test_reformat_one_sided(self):
         """
         Test a merge that changes the format (eg. quoting) on one
         side of the merge, but leaves content intact.
         """
 
-        # On arbitrary changes in formatting, we reformat the entire
-        # line, defaulting to unquoted...
+        # On arbitrary changes in formatting, we preserve the
+        # formatting in the A merge branch
+
         self.run_and_compare(self.file_unquoted,
                              self.file_partially_quoted,
                              self.file_unquoted,
-                             self.file_unquoted,
+                             self.file_partially_quoted,
                              "name")
 
         self.run_and_compare(self.file_partially_quoted,
@@ -108,9 +120,6 @@ class TestFormatting(MergeTest):
                              self.file_unquoted,
                              "name")
 
-        # ... with the special case that if side A has no changes,
-        # then we prefer to keep that side entirely intact, regardless
-        # of its format, as long as side B has the same logical contents
         self.run_and_compare(self.file_partially_quoted,
                              self.file_partially_quoted,
                              self.file_unquoted,
@@ -124,6 +133,7 @@ class TestABLineMerge(MergeTest):
     does not change the line contents.
     """
 
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
     def test_deleted_lines(self):
         """
         Test handling lines deleted from both A and B
@@ -144,6 +154,7 @@ class TestABLineMerge(MergeTest):
                              "testdata/longer_del2.csv",
                              "name")
 
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
     def test_added_lines(self):
         """
         Test handling lines added to both A and B
@@ -158,6 +169,23 @@ class TestABLineMerge(MergeTest):
                              self.file_longer,
                              self.file_longer,
                              self.file_longer,
+                             "name")
+
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_moved_lines(self):
+        """
+        Test handling lines moved in both A and B
+        """
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_move1.csv",
+                             "testdata/longer_move1.csv",
+                             "testdata/longer_move1.csv",
+                             "name")
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_move2.csv",
+                             "testdata/longer_move2.csv",
+                             "testdata/longer_move2.csv",
                              "name")
 
 if __name__ == "__main__":
