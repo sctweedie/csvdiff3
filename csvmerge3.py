@@ -176,6 +176,55 @@ def merge_one_changed_AB(state, key_LCA, key_AB):
 
     line_LCA = state.cursor_LCA.find_next_match(key_AB)
 
+    if line_LCA:
+        # The AB line has a match in the LCA.
+        #
+        # However, the current line in the LCA may also have a match
+        # in A/B.  We have a choice, which will affect how quickly we
+        # can get file cursors back in sync:
+        #
+        # * we can leave the current lines in LCA and pull the match
+        #   from the forward search, or
+        #
+        # * we can pull lines out of the LCA and into the backlog
+        #   until we are back in sync
+        #
+        # In order to get the files back in sync again as quickly as
+        # possible (to ensure accurate reordering of lines), it is
+        # helpful to choose the action which results in the fewest
+        # out-of-order lines.
+        #
+        # So if our AB match is a long way into LCA but the current
+        # LCA line matches something close in AB, just do a lookahead
+        # match and consume the distant LCA line, leaving the LCA
+        # cursor where it is; and we'll be in sync again as soon as we
+        # reach the AB line which matches LCA[0].
+        #
+        # But if the AB key matches a nearby line in the LCA, then we
+        # should not process that match immediately; but rather pull
+        # LCA lines into the backlog until the LCA cursor reaches the
+        # matching line.
+
+        LCA_distance = line_LCA.linenr - state.cursor_LCA.linenr
+
+        # Only push to backlog if the LCA match is not already in the
+        # backlog!
+
+        if LCA_distance > 0:
+            A_match = state.cursor_A.find_next_match(key_LCA)
+
+            if A_match:
+                A_distance = A_match.linenr - state.cursor_A.linenr
+
+                if LCA_distance < A_distance:
+                    logging.debug("  Action: Push %d lines from LCA to backlog"
+                                  % LCA_distance)
+                    while state.cursor_LCA.current_key() != key_AB:
+                        logging.debug("    Push line %s" % state.cursor_LCA[0].text[0:-1])
+                        state.cursor_LCA.move_to_backlog()
+
+                    return
+
     # And now do a three-way field-by-field merge.
 
     merge_one_line(state, line_LCA, line_A, line_B)

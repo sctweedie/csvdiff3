@@ -25,6 +25,10 @@ class Line:
     def __format__(self, format):
         return str(self.row)
 
+    def __sub__(self, line):
+        assert isinstance(line, Line)
+        return self.linenr - line.linenr
+
 class FileReader:
     """
     File reader which also retains the original, unmodified contents of
@@ -218,8 +222,9 @@ class Cursor:
 
         Automatically advances to the next line position.
         """
+        key = self.current_key()
         assert not key in self.backlog
-        self.backlog[self.current_key()] = getline(0)
+        self.backlog[key] = self.getline(0)
         self.advance()
 
     def find_next_match(self, key):

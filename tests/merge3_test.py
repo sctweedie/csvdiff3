@@ -98,7 +98,7 @@ class TestFormatting(MergeTest):
                              self.file_partially_quoted,
                              "name")
 
-    #@unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
     def test_reformat_one_sided(self):
         """
         Test a merge that changes the format (eg. quoting) on one
@@ -171,7 +171,7 @@ class TestABLineMerge(MergeTest):
                              self.file_longer,
                              "name")
 
-    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    #@unittest.skipIf(Debug.skip_tests, "skipping for debug")
     def test_moved_lines(self):
         """
         Test handling lines moved in both A and B
