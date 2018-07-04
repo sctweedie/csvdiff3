@@ -113,8 +113,7 @@ class TestCursor(unittest.TestCase):
 
             cursor.advance()
             self.assertTrue(cursor.EOF())
-            with self.assertRaises(IndexError):
-                key = cursor.current_key()
+            self.assertEqual(cursor.current_key(), None)
             
 if __name__ == "__main__":
     unittest.main()

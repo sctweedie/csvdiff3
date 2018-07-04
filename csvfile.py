@@ -12,14 +12,15 @@ import csv
 from collections import OrderedDict
 
 class Line:
-    """ 
-    Holds an individual line from a CSV file. 
+    """
+    Holds an individual line from a CSV file.
     """
 
     def __init__(self, text, row, linenr):
         self.text = text
         self.row = row
         self.linenr = linenr
+        self.is_consumed = False
 
 class FileReader:
     """
@@ -100,7 +101,7 @@ class CSVFile:
         # In the future, this may be replaced with a read that
         # searches ahead in the file only far enough to resolve
         # reordered lines with a given window.
-        
+
         for count, line in enumerate(self.reader, 2):
             self.lines.append(line)
             key = line.row[self.key_index]
@@ -184,10 +185,21 @@ class Cursor:
         if self.linenr <= self.file.last_line:
             self.linenr += 1
 
+        # Skip over any lines which have already been processed
+
+        while (not self.EOF()) and self[0].is_consumed:
+            self.linenr += 1
+
     def current_key(self):
         """
         Return the key of the current line
+
+        Returns None if we are at EOF.
         """
+
+        if self.EOF():
+            return None
+
         return self.getline(0).row[self.file.key_index]
 
     def EOF(self):
@@ -216,8 +228,22 @@ class Cursor:
         match.
         """
         if key in self.backlog:
-            return self.backlog.pop(key)
+            return self.backlog[key]
 
         if not key in self.file.lines_by_key:
             return None
-        return self.file.lines_by_key[key].pop[0]
+        lines = self.file.lines_by_key[key]
+        if not lines:
+            return None
+        return lines[0]
+
+    def consume(self, key, line):
+        line.is_consumed = True
+
+        if key in self.backlog:
+            assert self.backlog[key] == line
+            del self.backlog[key]
+            return
+
+        found_line = self.file.lines_by_key[key].pop[0]
+        assert found_line == line

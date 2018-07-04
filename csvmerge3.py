@@ -15,8 +15,8 @@ def choose3(LCAval, Aval, Bval, allow_conflict = False):
     """
     Given three arbitrary values representing some property of the LCA
     and A/B branches, choose an appropriate output value.
-    
-    The usual rules for 3-way merge are used: 
+
+    The usual rules for 3-way merge are used:
     * if A has changed LCA and B has not, then inherit the change from
       A
     * if B has changed LCA and A has not, then inherit the change from
@@ -65,6 +65,11 @@ class __State:
         self.cursor_A.advance()
         self.cursor_B.advance()
 
+    def consume(self, key, line_LCA, line_A, line_B):
+        self.cursor_LCA.consume(key, line_LCA)
+        self.cursor_A.consume(key, line_A)
+        self.cursor_B.consume(key, line_B)
+
 def merge3_next(state):
     """
     Make one line of progress on the 3-way merge.
@@ -76,58 +81,18 @@ def merge3_next(state):
     files as data gets handled successfully.
     """
 
-    # First, check if the next line of each input file has the
-    # exact same text
-    text_LCA = state.cursor_LCA[0].text
-    text_A = state.cursor_A[0].text
-    text_B = state.cursor_B[0].text
-
-    # If they are all the same, then that is our next output line
-    if text_LCA == text_A == text_B:
-        state.stream.write(text_A)
-        state.advance_all()
-        return
-        
-    # One more all-the-same test... if the LCA and A lines are the
-    # same, and B is the same *logical* contents but has reformatted
-    # the fields, then just use the line from A.
-
-    if text_LCA == text_A and \
-       state.cursor_LCA[0].row == state.cursor_B[0].row:
-        state.stream.write(text_A)
-        state.advance_all()
-        return
-
-    # And final all-the-same test... if the same reformatting is
-    # present on both A and B sides, and the logical content is
-    # unchanged, then apply the reformatting.
-
-    if text_A == text_B and \
-       state.cursor_LCA[0].row == state.cursor_A[0].row:
-        state.stream.write(text_A)
-        state.advance_all()
-        return
-
-    # Otherwise, we do an intelligent 3-way merge on the current state
-
     # First, we need to know the keys of each line
-    
+
     key_LCA = state.cursor_LCA.current_key()
     key_A = state.cursor_A.current_key()
     key_B = state.cursor_B.current_key()
 
-    # Are the keys the same in each file?  If so, we can simply
-    # consume the next line from each file, and do a field-by-field
-    # merge
+    # Are all the keys the same?  Easy, we've matched the lines so
+    # process them now.
 
     if key_LCA == key_A == key_B:
-        merge_one_line(state,
-                       state.cursor_LCA[0],
-                       state.cursor_A[0],
-                       state.cursor_B[0])
-        state.advance_all()
+        merge_same_keys(state, key_LCA)
         return
-
     # Now the real work starts: figure how to handle the many, various
     # possibilities where the next lines in each source file may have
     # different keys.
@@ -152,13 +117,106 @@ def merge3_next(state):
 
     return merge_one_all_different(state, key_LCA, key_A, key_B)
 
-def merge_one_changed_AB(state, key_LCA, key_A):
-    return UnhandledError
+def merge_same_keys(state, key_LCA):
+    """
+    All three branches have the same next key.  If some of the lines
+    match exactly, then we may want to output the lines' text
+    verbatim; otherwise we go to a field-by-field merge and risk
+    reformatting some fields.
+    """
+
+    text_LCA = state.cursor_LCA[0].text
+    text_A = state.cursor_A[0].text
+    text_B = state.cursor_B[0].text
+
+    # First, check if the next line of each input file has the exact
+    # same text.  If they are all the same, then that is our next
+    # output line
+    if text_LCA == text_A == text_B:
+        state.stream.write(text_A)
+        state.advance_all()
+        return
+
+    # One more all-the-same test... if the LCA and A lines are the
+    # same, and B is the same *logical* contents but has reformatted
+    # the fields, then just use the line from A.
+
+    if text_LCA == text_A and \
+       state.cursor_LCA[0].row == state.cursor_B[0].row:
+        state.stream.write(text_A)
+        state.advance_all()
+        return
+
+    # And final all-the-same test... if the same reformatting is
+    # present on both A and B sides, and the logical content is
+    # unchanged, then apply the reformatting.
+
+    if text_A == text_B and \
+       state.cursor_LCA[0].row == state.cursor_A[0].row:
+        state.stream.write(text_A)
+        state.advance_all()
+        return
+
+    # Otherwise, we do an intelligent 3-way merge on the current state
+
+    merge_one_line(state,
+                   state.cursor_LCA[0],
+                   state.cursor_A[0],
+                   state.cursor_B[0])
+    state.advance_all()
+
+
+def merge_one_changed_AB(state, key_LCA, key_AB):
+    """
+    The A and B merge branches both have the same key, which is
+    different from what's on the LCA.
+    """
+
+    # Maybe the line in the LCA has simply been deleted?  If so, we
+    # can skip past it and maybe resynchronise with that file later
+    # on.
+
+    if not (state.cursor_A.find_next_match(key_LCA) or \
+            state.cursor_B.find_next_match(key_LCA)):
+
+        # We can't find the LCA key anywhere else, drop it.
+        #
+        # This should automatically pick up the case where A and B are
+        # now empty.
+
+        state.cursor_LCA.advance()
+        return
+
+    # So we have the same non-empty key on both A and B.  We still
+    # need both line contents in case there are field changes, of
+    # course.
+
+    line_A = state.cursor_A[0]
+    line_B = state.cursor_B[0]
+
+    # But it's still possible that this key exists elsewhere in the
+    # LCA and has simply moved.  Look for that as an LCA line for the
+    # merge.
+
+    line_LCA = state.cursor_LCA.find_next_match(key_AB)
+
+    # And now do a three-way field-by-field merge.
+
+    merge_one_line(state, line_LCA, line_A, line_B)
+    state.consume(state, key, line_LCA, line_A, line_B)
 
 def merge_one_changed_A(state, key_LCA, key_A):
+    """
+    LCA and the B merge branch have the same key, but A has changed;
+    merge in that change.
+    """
     return UnhandledError
 
 def merge_one_changed_B(state, key_LCA, key_B):
+    """
+    LCA and the A merge branch have the same key, but B has changed;
+    merge in that change.
+    """
     return UnhandledError
 
 def merge_one_all_different(state, key_LCA, key_A, key_B):
@@ -171,7 +229,7 @@ def lookup_field(line, column):
     if column == None:
         return None
     return line.row[column]
-    
+
 def merge_one_line(state, line_LCA, line_A, line_B):
     """
     Perform field-by-field merging of LCA, A and B versions of a given
@@ -237,7 +295,7 @@ def merge3(file_lca, file_a, file_b, key, output = sys.stdout):
         writer.writerow(headers.headers)
 
     # Initialise the merging state
-    
+
     state = __State(file_LCA, file_A, file_B, headers, output, writer)
 
     while not state.EOF():

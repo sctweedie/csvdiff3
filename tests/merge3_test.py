@@ -40,6 +40,8 @@ class MergeTest(unittest.TestCase):
     file_output = "testdata/TEST_OUTPUT.csv"
     failure_output = "testdata/SAVED_OUTPUT.csv"
 
+    file_longer = "testdata/longer.csv"
+
     def run_and_compare(self,
                         file_LCA, file_A, file_B,
                         file_expected, key):
@@ -113,6 +115,29 @@ class TestFormatting(MergeTest):
                              self.file_partially_quoted,
                              self.file_unquoted,
                              self.file_partially_quoted,
+                             "name")
+
+class TestABLineMerge(MergeTest):
+    """
+    Tests for 3-way merge where the same changes are applied to both
+    the A and B branches.  Tests added, deleted or moved lines, but
+    does not change the line contents.
+    """
+
+    def test_deleted_lines(self):
+        """
+        Test handling lines deleted from both A and B
+        """
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_del1.csv",
+                             "testdata/longer_del1.csv",
+                             "testdata/longer_del1.csv",
+                             "name")
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_del2.csv",
+                             "testdata/longer_del2.csv",
+                             "testdata/longer_del2.csv",
                              "name")
 
 if __name__ == "__main__":
