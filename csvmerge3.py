@@ -2,6 +2,7 @@
 
 import sys
 import click
+import logging
 from csvfile import *
 from headers import Headers
 
@@ -87,12 +88,16 @@ def merge3_next(state):
     key_A = state.cursor_A.current_key()
     key_B = state.cursor_B.current_key()
 
+    logging.debug("Next iteration: keys are %s, %s, %s" % \
+                  (key_LCA, key_A, key_B))
+
     # Are all the keys the same?  Easy, we've matched the lines so
     # process them now.
 
     if key_LCA == key_A == key_B:
         merge_same_keys(state, key_LCA)
         return
+
     # Now the real work starts: figure how to handle the many, various
     # possibilities where the next lines in each source file may have
     # different keys.
@@ -133,6 +138,7 @@ def merge_same_keys(state, key_LCA):
     # same text.  If they are all the same, then that is our next
     # output line
     if text_LCA == text_A == text_B:
+        logging.debug("  Writing exact text: %s" % text_A[0:-1])
         state.stream.write(text_A)
         state.advance_all()
         return
@@ -143,6 +149,7 @@ def merge_same_keys(state, key_LCA):
 
     if text_LCA == text_A and \
        state.cursor_LCA[0].row == state.cursor_B[0].row:
+        logging.debug("  Writing exact text: %s" % text_A[0:-1])
         state.stream.write(text_A)
         state.advance_all()
         return
@@ -153,6 +160,7 @@ def merge_same_keys(state, key_LCA):
 
     if text_A == text_B and \
        state.cursor_LCA[0].row == state.cursor_A[0].row:
+        logging.debug("  Writing exact text: %s" % text_A[0:-1])
         state.stream.write(text_A)
         state.advance_all()
         return
@@ -172,18 +180,22 @@ def merge_one_changed_AB(state, key_LCA, key_AB):
     different from what's on the LCA.
     """
 
+    logging.debug("  Strategy: merge_one_changed_AB(%s,%s)" %
+                  (key_LCA, key_AB))
+
     # Maybe the line in the LCA has simply been deleted?  If so, we
     # can skip past it and maybe resynchronise with that file later
     # on.
 
-    if not (state.cursor_A.find_next_match(key_LCA) or \
-            state.cursor_B.find_next_match(key_LCA)):
+    if key_LCA and not (state.cursor_A.find_next_match(key_LCA) or \
+                        state.cursor_B.find_next_match(key_LCA)):
 
         # We can't find the LCA key anywhere else, drop it.
         #
         # This should automatically pick up the case where A and B are
         # now empty.
 
+        logging.debug("  Action: advance(LCA)")
         state.cursor_LCA.advance()
         return
 
@@ -203,7 +215,7 @@ def merge_one_changed_AB(state, key_LCA, key_AB):
     # And now do a three-way field-by-field merge.
 
     merge_one_line(state, line_LCA, line_A, line_B)
-    state.consume(state, key, line_LCA, line_A, line_B)
+    state.consume(key_AB, line_LCA, line_A, line_B)
 
 def merge_one_changed_A(state, key_LCA, key_A):
     """
@@ -225,7 +237,11 @@ def merge_one_all_different(state, key_LCA, key_A, key_B):
 def lookup_field(line, column):
     """
     Lookup the value of a given (numbered) column in a given Line
+
+    Returns None if either the column or the line is None
     """
+    if not line:
+        return None
     if column == None:
         return None
     return line.row[column]
@@ -238,6 +254,9 @@ def merge_one_line(state, line_LCA, line_A, line_B):
     Any or all of the files may be missing a value for one or more
     fields, in which case an empty string is used for those fields.
     """
+
+    logging.debug("  Action: merge_one_line(LCA %s, A %s, B %s)" %
+                  (format(line_LCA), format(line_A), format(line_B)))
 
     # do field-by-field merging
     row = []
@@ -259,13 +278,21 @@ def merge_one_line(state, line_LCA, line_A, line_B):
 
         row.append(value)
 
+    logging.debug("  Writing row: %s" % row)
+
     state.writer.writerow(row)
 
-def merge3(file_lca, file_a, file_b, key, output = sys.stdout):
+def merge3(file_lca, file_a, file_b, key,
+           output = sys.stdout,
+           debug = True):
     """
     Perform a full 3-way merge on 3 given CSV files, using the given
     column name as a primary key.
     """
+
+    if debug:
+        logging.basicConfig(filename = "DEBUG.log", level = logging.DEBUG)
+        logging.debug("Started new run.")
 
     file_LCA = CSVFile(file_lca, key=key)
     file_A = CSVFile(file_a, key=key)
@@ -311,9 +338,10 @@ def merge3(file_lca, file_a, file_b, key, output = sys.stdout):
 @click.argument("filename_A", type=click.File("rt"))
 @click.argument("filename_B", type=click.File("rt"))
 @click.option("-k", "--key", required=True)
+@click.option("-d", "--debug", is_flag = True, default=False)
 
-def merge3_cli(filename_lca, filename_a, filename_b, key):
-    merge3(filename_lca, filename_a, filename_b, key)
+def merge3_cli(filename_lca, filename_a, filename_b, key, debug):
+    merge3(filename_lca, filename_a, filename_b, key, debug)
 
 if __name__ == "__main__":
     merge3_cli()

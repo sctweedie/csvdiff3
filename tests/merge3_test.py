@@ -128,16 +128,36 @@ class TestABLineMerge(MergeTest):
         """
         Test handling lines deleted from both A and B
         """
+
+        # longer_del1 has lines missing from the middle of the file
         self.run_and_compare(self.file_longer,
                              "testdata/longer_del1.csv",
                              "testdata/longer_del1.csv",
                              "testdata/longer_del1.csv",
                              "name")
 
+        # longer_del2 has lines missing from the start and end of the
+        # file
         self.run_and_compare(self.file_longer,
                              "testdata/longer_del2.csv",
                              "testdata/longer_del2.csv",
                              "testdata/longer_del2.csv",
+                             "name")
+
+    def test_added_lines(self):
+        """
+        Test handling lines added to both A and B
+        """
+        self.run_and_compare("testdata/longer_del1.csv",
+                             self.file_longer,
+                             self.file_longer,
+                             self.file_longer,
+                             "name")
+
+        self.run_and_compare("testdata/longer_del2.csv",
+                             self.file_longer,
+                             self.file_longer,
+                             self.file_longer,
                              "name")
 
 if __name__ == "__main__":

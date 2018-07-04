@@ -6,6 +6,7 @@
 #  correct order
 
 from csvfile import Line
+import logging
 
 class HeaderMap:
     """
@@ -356,3 +357,9 @@ class Headers:
     
         self.header_map = output
         self.headers = [h.name for h in output]
+
+        logging.debug("Header map:")
+        for column, map in enumerate(self.header_map):
+            logging.debug('  Column %d ("%s"): from LCA %s, A %s, B %s' %
+                          (column, map.name,
+                           map.LCA_column, map.A_column, map.B_column))

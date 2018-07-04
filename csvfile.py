@@ -22,6 +22,9 @@ class Line:
         self.linenr = linenr
         self.is_consumed = False
 
+    def __format__(self, format):
+        return str(self.row)
+
 class FileReader:
     """
     File reader which also retains the original, unmodified contents of
@@ -227,6 +230,9 @@ class Cursor:
         Searches the backlog first, then searches forward for the next
         match.
         """
+
+        assert key
+
         if key in self.backlog:
             return self.backlog[key]
 
@@ -238,12 +244,43 @@ class Cursor:
         return lines[0]
 
     def consume(self, key, line):
+        """
+        Complete processing for a given key and line, removing them from
+        further processing (either by removing them from the backlog,
+        or setting the line to be skipped by future cursor advances.
+
+        There will always be a key but the line may be null (if we are
+        processing a line that was deleted from this file.
+        """
+
+        if not line:
+            return
+
+        # If the line happens to live further on in the file, make
+        # sure we never process it again.
+
         line.is_consumed = True
+
+        # If this key is in the backlog, we should have found it
+        # there, so check that the backlog contains the right line and
+        # remove it.
 
         if key in self.backlog:
             assert self.backlog[key] == line
             del self.backlog[key]
             return
 
-        found_line = self.file.lines_by_key[key].pop[0]
+        # It's not in the backlog so it must be either the current
+        # line or some future one.  Find the first match:
+
+        found_line = self.file.lines_by_key[key].pop(0)
+
+        # Check that the line we have is in fact the earliest match:
+
         assert found_line == line
+
+        # and if it is the current line, we can advance to the next
+        # line.
+
+        if line.linenr == self.linenr:
+            self.advance()
