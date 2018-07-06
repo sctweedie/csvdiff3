@@ -26,6 +26,8 @@ class __State:
         self.cursor_A = Cursor(file_A)
         self.cursor_B = Cursor(file_B)
 
+        self.file_has_conflicts = False
+
     def EOF(self):
         if not self.cursor_LCA.EOF():
             return False
@@ -628,6 +630,8 @@ def merge_one_line(state, line_LCA, line_A, line_B):
     if conflicts:
         logging.debug("  Writing conflicts: %s" % row)
         conflicts.write(state)
+        state.file_has_conflicts = True
+
     else:
 
         # We call the merge function for deleted rows, just in case
@@ -693,3 +697,7 @@ def merge3(file_lca, file_a, file_b, key,
     state.cursor_A.assert_finished()
     state.cursor_B.assert_finished()
 
+    if state.file_has_conflicts:
+        return 1
+    else:
+        return 0
