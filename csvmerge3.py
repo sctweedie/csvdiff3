@@ -231,11 +231,11 @@ def resync_best_relevance(relevance_X, relevance_Y):
 
     if relevance_X == None:
 
-        return relevance_X
+        return relevance_Y
 
     elif relevance_Y == None:
 
-        return relevance_Y
+        return relevance_X
 
     else:
         if relevance_X < relevance_Y:
@@ -455,7 +455,69 @@ def merge_one_all_different(state, key_LCA, key_A, key_B):
     logging.debug("  Strategy: merge_one_all_different(%s,%s,%s)" %
                   (key_LCA, key_A, key_B))
 
-    raise UnhandledError
+    # We know that deletes have already been processed, so key_LCA
+    # must already exist in both A and B.  We have no idea if key_A
+    # exists in LCA or B yet, or key_B in LCA / A.
+
+    # Easy first checks: have we reached the end of A or B?  (We
+    # cannot have reached the end of both, as that would already have
+    # resulted in an AB match as key_A == key_B)
+
+    if not key_A:
+        logging.debug("  Action: EOF(A), emit B (%s)" % key_B)
+
+        line_B = state.cursor_B[0]
+        B_in_LCA = state.cursor_LCA.find_next_match(key_B)
+        merge_one_line(state, B_in_LCA, None, line_B)
+        state.consume(key_B, B_in_LCA, None, line_B)
+        return
+
+    if not key_B:
+        logging.debug("  Action: EOF(B), emit A (%s)" % key_A)
+
+        line_A = state.cursor_A[0]
+        A_in_LCA = state.cursor_LCA.find_next_match(key_A)
+        merge_one_line(state, A_in_LCA, Line_A, None)
+        state.consume(key_A, A_in_LCA, Line_A, None)
+        return
+
+    # Keys A and B both exist.  How do we decide which is better to
+    # emit?
+
+    # We will use the relevance algorithm described in notes.txt.
+    # Find how close key_A's match is in B, and vice-versa; then
+    # attempt to keep the closest match in the queue, to resync as
+    # soon as possible.  (Ie. we emit the key that as the most
+    # distant, least relevant match.)
+
+    A_relevance_in_B = resync_relevance(key_A, state.cursor_B)
+    B_relevance_in_A = resync_relevance(key_B, state.cursor_A)
+
+    # We will emit A if it has no relevance (must be an insert
+    # that is not also in B), or if it has less relevance than B
+
+    if (A_relevance_in_B == None) or \
+       (B_relevance_in_A != None and B_relevance_in_A < A_relevance_in_B):
+
+        logging.debug("  Action: prefer A by relevance distance (%s)" % key_A)
+
+        line_A = state.cursor_A[0]
+        A_in_LCA = state.cursor_LCA.find_next_match(key_A)
+        A_in_B = state.cursor_B.find_next_match(key_A)
+        merge_one_line(state, A_in_LCA, line_A, A_in_B)
+        state.consume(key_A, A_in_LCA, line_A, A_in_B)
+        return
+
+    else:
+        logging.debug("  Action: prefer B by relevance distance (%s)" % key_B)
+
+        line_B = state.cursor_B[0]
+        B_in_LCA = state.cursor_LCA.find_next_match(key_B)
+        B_in_A = state.cursor_A.find_next_match(key_B)
+        merge_one_line(state, B_in_LCA, B_in_A, line_B)
+        state.consume(key_B, B_in_LCA, B_in_A, line_B)
+        return
+
 
 def lookup_field(line, column):
     """
@@ -528,6 +590,14 @@ def merge_one_line(state, line_LCA, line_A, line_B):
     logging.debug("  Action: merge_one_line(LCA %s, A %s, B %s)" %
                   (format(line_LCA), format(line_A), format(line_B)))
 
+    # We call the merge function for deleted rows, just in case
+    # the delete conflicts with an update/modify.
+    #
+    # But for delete, we do *not* write out the final row if there
+    # is no conflict.
+
+    is_delete = bool(line_LCA) and not (line_A and line_B)
+
     # First, check if the corresponding lines of each input file have
     # the exact same text.  If they are all the same, then that is our
     # next output line, and we will avoid reformatting.
@@ -535,6 +605,10 @@ def merge_one_line(state, line_LCA, line_A, line_B):
     if changed_line_is_compatible(line_LCA, line_A) and \
        changed_line_is_compatible(line_LCA, line_B) and \
        changed_line_is_compatible(line_A, line_B):
+
+        if is_delete:
+            logging.debug("  Skipping deleted row: %s" % line_LCA.row)
+            return
 
         out_text = (line_A or line_B).text
         # Log the output without line-terminator
@@ -569,6 +643,17 @@ def merge_one_line(state, line_LCA, line_A, line_B):
         logging.debug("  Writing conflicts: %s" % row)
         conflicts.write(state)
     else:
+
+        # We call the merge function for deleted rows, just in case
+        # the delete conflicts with an update/modify.
+        #
+        # But for delete, we do *not* write out the final row if there
+        # is no conflict.
+
+        if is_delete:
+            logging.debug("  Skipping deleted row: %s" % row)
+            return
+
         logging.debug("  Writing row: %s" % row)
         state.writer.writerow(row)
 

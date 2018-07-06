@@ -228,6 +228,107 @@ class TestLineConflict(MergeTest):
                              "name")
 
 
+class TestAsymmetricLineChanges(MergeTest):
+    """
+    Tests for 3-way merge where the A and B sides are adding, deleting
+    or moving lines in different ways.
+    """
+
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_overlapping_add1(self):
+        """
+        Test handling lines added differently in both A and B
+        """
+
+        # A adds a single line at the start of the file;
+        #
+        # B adds that plus an additional line before it.
+        #
+        # Requires 3-way-merge handling, as LCA, A and B will all be
+        # different at the start.
+
+        self.run_and_compare(self.file_unquoted,
+                             "testdata/simple_ins1.csv",
+                             "testdata/simple_ins2.csv",
+                             "testdata/simple_ins2.csv",
+                             "name")
+
+        # As before, with A/B reversed.  The merge should not care
+        # which order the lines are added, as the longer insert is a
+        # strict superset of the shorter one regardless of which comes
+        # first.
+
+        self.run_and_compare(self.file_unquoted,
+                             "testdata/simple_ins2.csv",
+                             "testdata/simple_ins1.csv",
+                             "testdata/simple_ins2.csv",
+                             "name")
+
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_overlapping_add2(self):
+        """
+        Test handling lines added differently in both A and B
+        """
+
+        # A adds a single line at the end of the file;
+        #
+        # B adds that plus an additional line after it.
+
+        self.run_and_compare(self.file_unquoted,
+                             "testdata/simple_append1.csv",
+                             "testdata/simple_append2.csv",
+                             "testdata/simple_append2.csv",
+                             "name")
+
+        # A adds a single line at the end of the file;
+        #
+        # B adds that plus an additional line before it.
+
+        self.run_and_compare(self.file_unquoted,
+                             "testdata/simple_append1.csv",
+                             "testdata/simple_append3.csv",
+                             "testdata/simple_append3.csv",
+                             "name")
+
+        # As the previous two, but with A/B reversed; output should be
+        # the same.
+
+        self.run_and_compare(self.file_unquoted,
+                             "testdata/simple_append2.csv",
+                             "testdata/simple_append1.csv",
+                             "testdata/simple_append2.csv",
+                             "name")
+
+        # A adds a single line at the end of the file;
+        #
+        # B adds that plus an additional line before it.
+
+        self.run_and_compare(self.file_unquoted,
+                             "testdata/simple_append3.csv",
+                             "testdata/simple_append1.csv",
+                             "testdata/simple_append3.csv",
+                             "name")
+
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_overlapping_del1(self):
+        """
+        Test handling lines deleted differently in both A and B
+        """
+
+        # A removes a single line near the start of the file;
+        #
+        # B removes two lines.
+        #
+        # Requires 3-way-merge handling, as LCA, A and B will all be
+        # different at the start.
+
+        self.run_and_compare("testdata/simple_ins2.csv",
+                             "testdata/simple_ins1.csv",
+                             self.file_unquoted,
+                             self.file_unquoted,
+                             "name")
+
+
 if __name__ == "__main__":
     unittest.main()
 
