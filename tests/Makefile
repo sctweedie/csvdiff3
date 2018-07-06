@@ -1,4 +1,4 @@
-PYTHONENV  = PYTHONPATH=..
+PYTHONENV  = PYTHONPATH=../csvdiff3
 PYTHON     = python3
 tests	   = headers_test.py file_test.py merge3_test.py
 
