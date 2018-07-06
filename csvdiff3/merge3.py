@@ -1,10 +1,9 @@
 #!/usr/bin/python3
 
 import sys
-import click
 import logging
-from file import *
-from headers import Headers
+from .file import *
+from .headers import Headers
 
 class ConflictError(Exception):
     pass
@@ -694,16 +693,3 @@ def merge3(file_lca, file_a, file_b, key,
     state.cursor_A.assert_finished()
     state.cursor_B.assert_finished()
 
-@click.command()
-
-@click.argument("filename_LCA", type=click.File("rt"))
-@click.argument("filename_A", type=click.File("rt"))
-@click.argument("filename_B", type=click.File("rt"))
-@click.option("-k", "--key", required=True)
-@click.option("-d", "--debug", is_flag = True, default=False)
-
-def merge3_cli(filename_lca, filename_a, filename_b, key, debug):
-    merge3(filename_lca, filename_a, filename_b, key, debug)
-
-if __name__ == "__main__":
-    merge3_cli()

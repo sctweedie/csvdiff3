@@ -1,7 +1,7 @@
 #!usr/bin/python3
 
 import unittest
-from headers import *
+from csvdiff3.headers import *
 
 def headers_merge3(LCA, A, B):
     headers = Headers(LCA, A, B)

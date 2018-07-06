@@ -4,7 +4,7 @@ import unittest
 import os
 import filecmp
 
-import merge3
+from csvdiff3 import merge3
 
 class Debug:
     # Set this true to disable all tests; a single test can then be

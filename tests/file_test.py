@@ -1,7 +1,7 @@
 #!usr/bin/python3
 
 import unittest
-from file import *
+from csvdiff3.file import *
 
 class TestFile(unittest.TestCase):
     simple_filename = "testdata/simple.csv"
