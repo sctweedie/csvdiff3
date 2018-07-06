@@ -459,27 +459,10 @@ def merge_one_all_different(state, key_LCA, key_A, key_B):
     # must already exist in both A and B.  We have no idea if key_A
     # exists in LCA or B yet, or key_B in LCA / A.
 
-    # Easy first checks: have we reached the end of A or B?  (We
-    # cannot have reached the end of both, as that would already have
-    # resulted in an AB match as key_A == key_B)
+    # Because key_LCA is in both A and B, neither A nor B can be empty
 
-    if not key_A:
-        logging.debug("  Action: EOF(A), emit B (%s)" % key_B)
-
-        line_B = state.cursor_B[0]
-        B_in_LCA = state.cursor_LCA.find_next_match(key_B)
-        merge_one_line(state, B_in_LCA, None, line_B)
-        state.consume(key_B, B_in_LCA, None, line_B)
-        return
-
-    if not key_B:
-        logging.debug("  Action: EOF(B), emit A (%s)" % key_A)
-
-        line_A = state.cursor_A[0]
-        A_in_LCA = state.cursor_LCA.find_next_match(key_A)
-        merge_one_line(state, A_in_LCA, Line_A, None)
-        state.consume(key_A, A_in_LCA, Line_A, None)
-        return
+    assert key_A
+    assert key_B
 
     # Keys A and B both exist.  How do we decide which is better to
     # emit?

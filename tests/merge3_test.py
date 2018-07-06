@@ -437,6 +437,42 @@ class TestAsymmetricLineChanges(MergeTest):
                              self.file_unquoted,
                              "name")
 
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_overlapping_move_del(self):
+        """
+        Test handling lines deleted on one side and moved on the other.
+        """
+
+        # A reorders several lines in the file;
+        #
+        # B removes most of them.
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_move1.csv",
+                             "testdata/longer_trunc.csv",
+                             "testdata/longer_movetrunc1.csv",
+                             "name")
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_move2.csv",
+                             "testdata/longer_trunc.csv",
+                             "testdata/longer_trunc.csv",
+                             "name")
+
+        # And with A/B reversed
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_trunc.csv",
+                             "testdata/longer_move1.csv",
+                             "testdata/longer_movetrunc1.csv",
+                             "name")
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_trunc.csv",
+                             "testdata/longer_move2.csv",
+                             "testdata/longer_trunc.csv",
+                             "name")
+
 
 if __name__ == "__main__":
     unittest.main()
