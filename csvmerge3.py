@@ -12,31 +12,6 @@ class ConflictError(Exception):
 class UnhandledError(Exception):
     pass
 
-def choose3(LCAval, Aval, Bval, allow_conflict = False):
-    """
-    Given three arbitrary values representing some property of the LCA
-    and A/B branches, choose an appropriate output value.
-
-    The usual rules for 3-way merge are used:
-    * if A has changed LCA and B has not, then inherit the change from
-      A
-    * if B has changed LCA and A has not, then inherit the change from
-      B
-    * If both A and B differ from the LCA value, then either
-      Choose the A value (if "allow_conflict" is set or if both A and
-      B have the same change), or
-      Raise a ConflictError exception
-    """
-    if LCAval == Aval:
-        return Bval
-    if LCAval == Bval:
-        return Aval
-    if Aval == Bval:
-        return Aval
-    if allow_conflict:
-        return Aval
-    raise ConflictError
-
 class __State:
     def __init__(self, file_LCA, file_A, file_B,
                  headers, stream, writer):
@@ -70,6 +45,75 @@ class __State:
         self.cursor_LCA.consume(key, line_LCA)
         self.cursor_A.consume(key, line_A)
         self.cursor_B.consume(key, line_B)
+
+class Conflict:
+    """
+    Record a single conflict during merging of a single line.
+    We accumulate conflicts as we merge and then output the results at
+    the end of the line.
+    """
+    def __init__(self, val_A, val_B, column):
+        self.val_A = val_A
+        self.val_B = val_B
+        self.column = column
+
+class Conflicts:
+    """
+    Maintain a set of conflicts while we merge a single line.
+    """
+    def __init__(self, line_LCA, line_A, line_B):
+        self.line_LCA = line_LCA
+        self.line_A = line_A
+        self.line_B = line_B
+
+        self.conflicts = []
+
+    def __iter__(self):
+        return iter(self.conflicts)
+
+    def __bool__(self):
+        return len(self.conflicts) > 0
+
+    def add(self, conflict):
+        self.conflicts.append(conflict)
+
+    @staticmethod
+    def line_to_str(line, cursor):
+        if not line:
+            return "Deleted @%d" % cursor.linenr
+        return "@%d" % line.linenr
+
+    def write(self, state):
+        """
+        Write a set of conflicts for a single line to the output.
+        """
+        linestr = ">>>>>> %s %s\n" % \
+            (state.cursor_A.file.filename,
+             self.line_to_str(self.line_A, state.cursor_LCA))
+        state.stream.write(linestr)
+
+        for c in self:
+            linestr = ">>>>>> %s = %s\n" % (c.column.name, c.val_A)
+            state.stream.write(linestr)
+
+        if self.line_A:
+            state.stream.write(self.line_A.text)
+
+        linestr = "====== %s %s\n" % \
+            (state.cursor_B.file.filename,
+             self.line_to_str(self.line_B, state.cursor_LCA))
+        state.stream.write(linestr)
+
+        for c in self:
+            linestr = "====== %s = %s\n" % (c.column.name, c.val_B)
+            state.stream.write(linestr)
+
+        if self.line_B:
+            state.stream.write(self.line_B.text)
+
+        linestr = "<<<<<<\n"
+        state.stream.write(linestr)
+
 
 def merge3_next(state):
     """
@@ -112,16 +156,6 @@ def merge3_next(state):
     if resync_LCA(state, key_LCA, key_A, key_B):
         return
 
-    # What _is_ the target for the merge?  If there's a change in both
-    # A and B then we preserve the order in A; so we only use B if LCA
-    # and A are the same
-
-    if key_LCA == key_A and key_B:
-        target_key = key_B
-    else:
-        target_key = key_A
-
-
     # First: do files A and B have the same next key?  If so, we have
     # a change that is common across both branch paths.
 
@@ -141,21 +175,6 @@ def merge3_next(state):
     # Next keys are different in all 3 files
 
     return merge_one_all_different(state, key_LCA, key_A, key_B)
-
-def merge_same_keys(state, key_LCA):
-    """
-    All three branches have the same next key.
-    """
-
-    # This is the simplest case, with no special cases: perform an
-    # intelligent 3-way merge on the current state and move to the
-    # next line.
-
-    merge_one_line(state,
-                   state.cursor_LCA[0],
-                   state.cursor_A[0],
-                   state.cursor_B[0])
-    state.advance_all()
 
 
 def resync_relevance(key, cursor):
@@ -269,6 +288,22 @@ def resync_LCA(state, key_LCA, key_A, key_B):
     return True
 
 
+def merge_same_keys(state, key_LCA):
+    """
+    All three branches have the same next key.
+    """
+
+    # This is the simplest case, with no special cases: perform an
+    # intelligent 3-way merge on the current state and move to the
+    # next line.
+
+    merge_one_line(state,
+                   state.cursor_LCA[0],
+                   state.cursor_A[0],
+                   state.cursor_B[0])
+    state.advance_all()
+
+
 def merge_one_changed_AB(state, key_LCA, key_AB):
     """
     The A and B merge branches both have the same key, which is
@@ -315,16 +350,93 @@ def merge_one_changed_A(state, key_LCA, key_A):
     LCA and the B merge branch have the same key, but A has changed;
     merge in that change.
     """
-    raise UnhandledError
+
+    logging.debug("  Strategy: merge_one_changed_A(%s,%s)" %
+                  (key_LCA, key_A))
+
+    # Maybe the line in the LCA has simply been deleted from A?
+
+    if key_LCA and not state.cursor_A.find_next_match(key_LCA):
+
+        # We can't find the LCA key anywhere in A, but it is still in
+        # B.  Do a merge; if B has changed the contents of the line
+        # and A deleted it, we still need to output a conflict,
+        # otherwise the merge will output nothing.
+
+        logging.debug("  Action: Merge delete A (missing key %s)" % key_LCA)
+
+        line_LCA = state.cursor_LCA[0]
+        line_B = state.cursor_B[0]
+
+        merge_one_line(state, line_LCA, None, line_B)
+        state.consume(key_LCA, line_LCA, None, line_B)
+        return
+
+    # It's not a delete so we're going to output a line with key_A; it
+    # has either been inserted or moved to this position.  Let's find
+    # if there are other lines in LCA or B that we can match against
+    # for a content merge.
+
+    logging.debug("  Action: Merge A (key %s)" % key_A)
+
+    line_A = state.cursor_A[0]
+    match_LCA = state.cursor_LCA.find_next_match(key_A)
+    match_B = state.cursor_B.find_next_match(key_A)
+
+    merge_one_line(state, match_LCA, line_A, match_B)
+    state.consume(key_A, match_LCA, line_A, match_B)
 
 def merge_one_changed_B(state, key_LCA, key_B):
     """
     LCA and the A merge branch have the same key, but B has changed;
     merge in that change.
     """
-    raise UnhandledError
+
+    logging.debug("  Strategy: merge_one_changed_B(%s,%s)" %
+                  (key_LCA, key_B))
+
+    # Maybe the line in the LCA has simply been deleted from B?
+
+    if key_LCA and not state.cursor_B.find_next_match(key_LCA):
+
+        # We can't find the LCA key anywhere in B, but it is still in
+        # A.  Do a merge; if A has changed the contents of the line
+        # and B deleted it, we still need to output a conflict,
+        # otherwise the merge will output nothing.
+
+        logging.debug("  Action: Merge delete B (missing key %s)" % key_LCA)
+
+        line_LCA = state.cursor_LCA[0]
+        line_A = state.cursor_A[0]
+
+        merge_one_line(state, line_LCA, Line_A, None)
+        state.consume(key_LCA, line_LCA, Line_A, None)
+        return
+
+    # It's not a delete so we're going to output a line with key_B; it
+    # has either been inserted or moved to this position.  Let's find
+    # if there are other lines in LCA or A that we can match against
+    # for a content merge.
+
+    logging.debug("  Action: Merge B (key %s)" % key_B)
+
+    line_B = state.cursor_B[0]
+    match_LCA = state.cursor_LCA.find_next_match(key_B)
+    match_A = state.cursor_A.find_next_match(key_B)
+
+    merge_one_line(state, match_LCA, match_A, line_B)
+    state.consume(key_B, match_LCA, match_A, line_B)
+
 
 def merge_one_all_different(state, key_LCA, key_A, key_B):
+    """
+    LCA and the A and B merge branches all have different keys.
+    Figure out what to do.
+    """
+
+    logging.debug("  Strategy: merge_one_all_different(%s,%s,%s)" %
+                  (key_LCA, key_A, key_B))
+
     raise UnhandledError
 
 def lookup_field(line, column):
@@ -359,6 +471,33 @@ def changed_line_is_compatible(before, after):
         return True
     return False
 
+def choose3(LCAval, Aval, Bval):
+    """
+    Given three arbitrary values representing some property of the LCA
+    and A/B branches, choose an appropriate output value.
+
+    The usual rules for 3-way merge are used:
+    * if A has changed LCA and B has not, then inherit the change from
+      A
+    * if B has changed LCA and A has not, then inherit the change from
+      B
+    * If both A and B differ from the LCA value but A and B are the
+      same, then choose that value.
+    * If A and B are different from each other and different from LCA,
+      then we we have a conflict.  This also includes the case where
+      either A or B is None, indicating that the row was deleted on
+      one side but modified on the other.
+
+      Raise a ConflictError exception in this case.
+    """
+    if LCAval == Aval:
+        return Bval
+    if LCAval == Bval:
+        return Aval
+    if Aval == Bval:
+        return Aval
+    raise ConflictError
+
 def merge_one_line(state, line_LCA, line_A, line_B):
     """
     Perform field-by-field merging of LCA, A and B versions of a given
@@ -387,6 +526,8 @@ def merge_one_line(state, line_LCA, line_A, line_B):
 
     # do field-by-field merging
     row = []
+    conflicts = Conflicts(line_LCA, line_A, line_B)
+
     for map in state.headers.header_map:
         # The header_map maps columns in the output to the correct
         # columns in the various source files
@@ -398,16 +539,19 @@ def merge_one_line(state, line_LCA, line_A, line_B):
             value = choose3(value_LCA, value_A, value_B)
         except ConflictError:
             # Need to emit a conflict marker in the output here
-            raise UnhandledError
+            conflicts.add(Conflict(value_A, value_B, map))
 
         if value == None:
             value = ""
 
         row.append(value)
 
-    logging.debug("  Writing row: %s" % row)
-
-    state.writer.writerow(row)
+    if conflicts:
+        logging.debug("  Writing conflicts: %s" % row)
+        conflicts.write(state)
+    else:
+        logging.debug("  Writing row: %s" % row)
+        state.writer.writerow(row)
 
 def merge3(file_lca, file_a, file_b, key,
            output = sys.stdout,

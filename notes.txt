@@ -148,9 +148,11 @@ information to tell that B had moved Q, so Q ended up in the backlog,
 only to be emmitted much later on.  Q was relevant for this decision
 but was not output at that time.
 
-Compare the example:
+Counterexample:
 
-state *EXAMPLE1*:
+Compare this with the example:
+
+state *EXAMPLE2*:
 LCA:	[P] Q R S T U V W X Y Z
 A:	[Z] P Q R S T U V W X Y
 B:	[Y] Z P Q R S T U V W X
@@ -161,5 +163,6 @@ In this case, the LCA line has high relevance (it is useful for making
 ordering decisions against A[1] and B[2]), whereas the lines in A/B
 ("Z" and "Y") have low relevance *for the purpose of describing
 original state*; in this case, we should preserve the LCA cursor where
-it is.
+it is; pushing everything in the LCA from "P" through "X" onto the
+backlog will achieve nothing.
 

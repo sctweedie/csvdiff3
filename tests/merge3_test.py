@@ -171,7 +171,7 @@ class TestABLineMerge(MergeTest):
                              self.file_longer,
                              "name")
 
-    #@unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
     def test_moved_lines(self):
         """
         Test handling lines moved in both A and B
@@ -187,6 +187,46 @@ class TestABLineMerge(MergeTest):
                              "testdata/longer_move2.csv",
                              "testdata/longer_move2.csv",
                              "name")
+
+class TestLineConflict(MergeTest):
+    """
+    Tests for 3-way merge where the different field changes are
+    applied on each side of the merge.
+    """
+
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_conflicting_updates(self):
+        """
+        Test handling lines changed differently in both A and B
+        """
+
+        self.run_and_compare(self.file_unquoted,
+                             "testdata/simple_changed.csv",
+                             "testdata/simple_changed2.csv",
+                             "testdata/simple_changedmerge.csv",
+                             "name")
+
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_conflicting_del_and_update(self):
+        """
+        Test handling lines deleted in one side of the merge and changed
+        in the other
+        """
+
+        # Changed on side A, deleted on side B
+        self.run_and_compare(self.file_unquoted,
+                             "testdata/simple_changed.csv",
+                             "testdata/simple_del1.csv",
+                             "testdata/simple_delmerge1.csv",
+                             "name")
+
+        # Changed on side B, deleted on side A
+        self.run_and_compare(self.file_unquoted,
+                             "testdata/simple_del1.csv",
+                             "testdata/simple_changed.csv",
+                             "testdata/simple_delmerge2.csv",
+                             "name")
+
 
 if __name__ == "__main__":
     unittest.main()

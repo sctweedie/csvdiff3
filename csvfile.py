@@ -90,12 +90,13 @@ class CSVFile:
     returns/searches for lines on demand.
     """
 
-    def __init__(self, stream, key, **args):
+    def __init__(self, stream, key, filename = "input", **args):
         self.reader = CSVHeaderFile(stream, **args)
 
         self.header = self.reader.header
         self.lines = [self.header]
         self.lines_by_key = {}
+        self.filename = filename
 
         if not key in self.header.row:
             raise KeyError
@@ -140,7 +141,7 @@ class CSVFile:
     @staticmethod
     def open(filename, key, **args):
         with open(filename, "rt") as file:
-            return CSVFile(file, key, **args)
+            return CSVFile(file, key, filename, **args)
 
 class Cursor:
     """
