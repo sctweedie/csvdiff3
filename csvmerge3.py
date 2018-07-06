@@ -102,6 +102,26 @@ def merge3_next(state):
     # possibilities where the next lines in each source file may have
     # different keys.
 
+    # Before we start looking for ways to merge, resync the cursors:
+    # attempt to move cursors forward harmlessly (moving lines to
+    # backlog) without changing the results of the merge.
+    #
+    # If the resync does anything, call it progress and restart
+    # matching on the new state.
+
+    if resync_LCA(state, key_LCA, key_A, key_B):
+        return
+
+    # What _is_ the target for the merge?  If there's a change in both
+    # A and B then we preserve the order in A; so we only use B if LCA
+    # and A are the same
+
+    if key_LCA == key_A and key_B:
+        target_key = key_B
+    else:
+        target_key = key_A
+
+
     # First: do files A and B have the same next key?  If so, we have
     # a change that is common across both branch paths.
 
@@ -138,6 +158,117 @@ def merge_same_keys(state, key_LCA):
     state.advance_all()
 
 
+def resync_relevance(key, cursor):
+    """
+    Determine the distance into a file (searching forward from the
+    given cursor) to the next match against a given key.  Used to
+    determine which is the closest key to resync towards.
+
+    Returns None if there is no key or no line found.
+
+    If the key is already found in the backlog then there will be
+    nothing appropriate to match further in the file, so return None.
+    """
+
+    if not key:
+        return None
+    line = cursor.find_next_match(key)
+    if not line:
+        return None
+
+    distance = line.linenr - cursor.linenr
+    if distance < 0:
+        return None
+
+    return distance
+
+def resync_best_relevance(relevance_X, relevance_Y):
+    """
+    Compare two relevance distances and return the best.
+
+    Ignores None values, except that if both X and Y are None, we
+    return None.
+    """
+
+    # "relevance" is actually "distance to relevance", so lower values
+    # mean more relevance
+
+    if relevance_X == None:
+
+        return relevance_X
+
+    elif relevance_Y == None:
+
+        return relevance_Y
+
+    else:
+        if relevance_X < relevance_Y:
+            return relevance_X
+        else:
+            return relevance_Y
+
+def resync_LCA(state, key_LCA, key_A, key_B):
+    """
+    Attempt to maintain cursor synchronisation between LCA and A/B, by
+    pushing the head line of LCA onto the backlog if we are not going
+    to need it soon.
+    """
+
+    # If there's nothing left in LCA, then there is nothing to do
+    # here!
+
+    if not key_LCA:
+        return False
+
+    # See "notes.txt" for a fuller explanation of the resync algorithm
+    # and purpose.
+
+    # First, find out how soon the LCA key might be relevant
+
+    LCA_relevance_in_A = resync_relevance(key_LCA, state.cursor_A)
+    LCA_relevance_in_B = resync_relevance(key_LCA, state.cursor_B)
+    LCA_relevance = resync_best_relevance(LCA_relevance_in_A,
+                                          LCA_relevance_in_B)
+
+    # If we find LCA_key in neither A nor B, it has been deleted and
+    # we can simply skip it
+
+    if LCA_relevance == None:
+        logging.debug("  Action: advance LCA (skipping %s)" % key_LCA)
+        state.cursor_LCA.advance()
+        return True
+
+    # Otherwise, we need to check if the LCA[0] line is more relevant
+    # than A or B (for the purpose of matching against original
+    # ordering)
+
+    A_relevance_in_LCA = resync_relevance(key_A, state.cursor_LCA)
+    B_relevance_in_LCA = resync_relevance(key_A, state.cursor_LCA)
+    AB_relevance = resync_best_relevance(A_relevance_in_LCA,
+                                         B_relevance_in_LCA)
+
+    # If the AB keys are completely new and unknown in LCA, then they
+    # are inserts; we'll consume those without advancing LCA, which
+    # will give us another chance at getting in sync after the
+    # insertion.
+
+    if AB_relevance == None:
+        return False
+
+    # If LCA is no more relevant than AB keys, then do nothing;
+    # there's nothing to be gained by disordering LCA
+
+    if LCA_relevance <= AB_relevance:
+        return False
+
+    # The line at LCA is less relevant (higher relevance distance)
+    # than the lines at AB, so push LCA[0] to the backlog
+
+    logging.debug("    Push LCA line %s to backlog" % key_LCA)
+    state.cursor_LCA.move_to_backlog()
+    return True
+
+
 def merge_one_changed_AB(state, key_LCA, key_AB):
     """
     The A and B merge branches both have the same key, which is
@@ -167,63 +298,12 @@ def merge_one_changed_AB(state, key_LCA, key_AB):
     # need both line contents in case there are field changes, of
     # course.
 
-    line_A = state.cursor_A[0]
-    line_B = state.cursor_B[0]
-
-    # But it's still possible that this key exists elsewhere in the
-    # LCA and has simply moved.  Look for that as an LCA line for the
-    # merge.
-
+    # A and B already have the right key, but the LCA line we need
+    # might be in the backlog...
     line_LCA = state.cursor_LCA.find_next_match(key_AB)
 
-    if line_LCA:
-        # The AB line has a match in the LCA.
-        #
-        # However, the current line in the LCA may also have a match
-        # in A/B.  We have a choice, which will affect how quickly we
-        # can get file cursors back in sync:
-        #
-        # * we can leave the current lines in LCA and pull the match
-        #   from the forward search, or
-        #
-        # * we can pull lines out of the LCA and into the backlog
-        #   until we are back in sync
-        #
-        # In order to get the files back in sync again as quickly as
-        # possible (to ensure accurate reordering of lines), it is
-        # helpful to choose the action which results in the fewest
-        # out-of-order lines.
-        #
-        # So if our AB match is a long way into LCA but the current
-        # LCA line matches something close in AB, just do a lookahead
-        # match and consume the distant LCA line, leaving the LCA
-        # cursor where it is; and we'll be in sync again as soon as we
-        # reach the AB line which matches LCA[0].
-        #
-        # But if the AB key matches a nearby line in the LCA, then we
-        # should not process that match immediately; but rather pull
-        # LCA lines into the backlog until the LCA cursor reaches the
-        # matching line.
-
-        LCA_distance = line_LCA.linenr - state.cursor_LCA.linenr
-
-        # Only push to backlog if the LCA match is not already in the
-        # backlog!
-
-        if LCA_distance > 0:
-            A_match = state.cursor_A.find_next_match(key_LCA)
-
-            if A_match:
-                A_distance = A_match.linenr - state.cursor_A.linenr
-
-                if LCA_distance < A_distance:
-                    logging.debug("  Action: Push %d lines from LCA to backlog"
-                                  % LCA_distance)
-                    while state.cursor_LCA.current_key() != key_AB:
-                        logging.debug("    Push line %s" % state.cursor_LCA[0].text[0:-1])
-                        state.cursor_LCA.move_to_backlog()
-
-                    return
+    line_A = state.cursor_A[0]
+    line_B = state.cursor_B[0]
 
     # And now do a three-way field-by-field merge.
 
@@ -235,17 +315,17 @@ def merge_one_changed_A(state, key_LCA, key_A):
     LCA and the B merge branch have the same key, but A has changed;
     merge in that change.
     """
-    return UnhandledError
+    raise UnhandledError
 
 def merge_one_changed_B(state, key_LCA, key_B):
     """
     LCA and the A merge branch have the same key, but B has changed;
     merge in that change.
     """
-    return UnhandledError
+    raise UnhandledError
 
 def merge_one_all_different(state, key_LCA, key_A, key_B):
-    return UnhandledError
+    raise UnhandledError
 
 def lookup_field(line, column):
     """

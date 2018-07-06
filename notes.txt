@@ -1,0 +1,165 @@
+Notes on line ordering
+======================
+
+The 3-way merge needs to handle lines being reordered in either the A
+or B side of the merge or both, wrt. the LCA (Latest Common Ancestor).
+
+We do not do chunk analysis to perform any sort of global matching of
+lines; we don't need perfection here, the primary keys in a CSV file
+ensure we still have valid output as long as the lines themselves
+still exist.
+
+But we do try to handle line ordering decisions locally as best as
+possible.
+
+"Local" here means "given the information at, or near, the current
+cursors walking through each input file", and performing actions one
+line at a time.
+
+
+We indicate the "cursor" in examples with []: eg.
+
+Line:	P Q [R] S T U V W X Y Z
+
+means that we have 11 lines to consider (not including the header),
+those lines having primary keys "P" through "Z" respectively, and we
+have processed "P" and "Q"; the line being actively considered (at the
+cursor) is "R".
+
+Lines before the cursor may be in the "backlog" (stashed for future
+processing) if we know that they are still needed later on (to match
+against a line in another file that has not yet been processed); lines
+after the cursor may already have been "consumed" (processed and
+merged by lookahead due to an earlier match in a different intput
+file).
+
+So to know which lines are still candidates for processing, we mark
+processed lines as lowercase keys; eg. in
+
+Line: 	p Q [R] S T U V W X y z
+
+"P" has been processed completely but "Q" is in the backlog; "Y" and
+"Z" are ahead of the cursor but are already consumed.
+
+Moved lines
+===========
+
+Consider a useful example:
+
+state *EXAMPLE1*:
+LCA:	[P] Q R S T U V W X Y Z
+A:	[Q] R S T U V W X Y Z P
+B:	[R] S T U V W X Y Z P Q
+
+In A, "P" has been moved to the end of the file; in B, both "P" and
+"Q" have moved.
+
+How do we handle the state shown, when the cursor is at keys "P", "Q"
+and "R" respectively in LCA/A/B?  The correct state should be as in
+file B: both files have moved key "P", so that key should be moved in
+the output; B has the additional change of moving "Q", so that change
+should be merged on top of A.
+
+Just looking at LCA/A/B above, it is not clear which of they keys "Q"
+or "R" should be emitted next.  We *can* emit either; we will find a
+match in the other files in any case, by lookahead.  But "R" matches
+against a nearby key in A, whereas "Q" matches against a distant key
+in B.
+
+But there is a simpler way to handle this.  If we move line "P" in LCA
+to the backlog, we get the state:
+
+state *BACKLOG1*:
+LCA:	p [Q] R S T U V W X Y Z
+A:	[Q] R S T U V W X Y Z P
+B:	[R] S T U V W X Y Z P Q
+
+and we can now see that LCA and A are back in sync; LCA and A have the
+same next content, but B represents a different change, so we should
+merge the change in B, which is that the next lines in LCA/A has been
+moved and so should be put into the backlog for now:
+
+state *MOVED1*:
+LCA:	p q [R] S T U V W X Y Z
+A:	q [R]S T U V W X Y Z P
+B:	[R] S T U V W X Y Z P Q
+
+And now all three files are completely in sync, and will remain so for
+the rest of the file, until we reach the final "P"/"Q" lines that were
+moved between LCA and A/B.  Being in sync allows us to detect other
+line reorderings accurately, so we want to be in sync as much as
+possible.
+
+Resyncing
+=========
+
+"Resyncing" is the process of attempting to keep the cursors in all 3
+files at corresponding lines.  This has 2 major benefits:
+
+ * It is much faster to process lines when we can match keys in all
+   files at once; we simply need to do a one-line merge and move onto
+   the next line, rather than searching for keys in the backlog /
+   lookahead; and
+
+ * If the next lines in A and B have different keys, We can more
+   accurately tell why this is if LCA is also in sync, and so make
+   correct decisions about whether the discrepancy is due to a change
+   in A or B.
+
+Let's go back to the original state of that example:
+
+state *EXAMPLE1*:
+LCA:	[P] Q R S T U V W X Y Z
+A:	[Q] R S T U V W X Y Z P
+B:	[R] S T U V W X Y Z P Q
+
+The desired action here is to move "P" in LCA to the backlog.  How do
+we make that determination?
+
+We can look at the distances between different key matches.
+
+The keys at the head of both A and B ("Q" and "R" respectively) are
+both found soon in the LCA, at distances of 1 and 2.
+
+The key at the head of LCA ("P") is found in both A and B, but at much
+longer distances: 10 lines away (for A) or 9 lines (for B).
+
+Remember that the order of lines in the output is determined by A and
+B, not LCA (LCA is used only to merge differences between A and B by
+determining which file represents a change that we need to preserve.)
+So we are going to emit lines nearer the start of A/B sooner than
+lines near the start of LCA.
+
+So "P" is going to be useful only, at best, in 9 lines' time (distance
+to occurrence in B).  But "Q" and "R" may be useful in 0 or 1 lines'
+time.
+
+This tells us that P is better off moving to the backlog for later
+consumption.  By pushing it out of the way and advancing the LCA
+cursor to "Q", we give the merge a chance to get LCA's cursor back in
+sync with A and B.
+
+We call the distance function here "distance-to-relevance", or
+"relevance" for short; it is the distance to the next line where a
+given key may matter for ordering decisions.  It does *not* imply that
+the line will actually be emitted at that distance (eg. in *BACKLOG1*
+above, LCA and A were resynced on "Q", but we then used that
+information to tell that B had moved Q, so Q ended up in the backlog,
+only to be emmitted much later on.  Q was relevant for this decision
+but was not output at that time.
+
+Compare the example:
+
+state *EXAMPLE1*:
+LCA:	[P] Q R S T U V W X Y Z
+A:	[Z] P Q R S T U V W X Y
+B:	[Y] Z P Q R S T U V W X
+
+in which lines are moving from the tail of LCA to the head of A/B.
+
+In this case, the LCA line has high relevance (it is useful for making
+ordering decisions against A[1] and B[2]), whereas the lines in A/B
+("Z" and "Y") have low relevance *for the purpose of describing
+original state*; in this case, we should preserve the LCA cursor where
+it is.
+
