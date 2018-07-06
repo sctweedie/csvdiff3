@@ -156,6 +156,23 @@ def merge3_next(state):
     if resync_LCA(state, key_LCA, key_A, key_B):
         return
 
+    # Resync will catch the case when the LCA key been deleted on both
+    # sides; we should still check for a one-sided deleted and handle
+    # any conflict that may occur from that
+
+    # Maybe the line in the LCA has simply been deleted from A?
+
+    if key_LCA and not state.cursor_A.find_next_match(key_LCA):
+        return delete_one_A(state, key_LCA)
+
+    # Or deleted from B?
+
+    if key_LCA and not state.cursor_B.find_next_match(key_LCA):
+        return delete_one_B(state, key_LCA)
+
+    # So the key at LCA[0] is still present in both A and B; we're not
+    # doing a delete so we need to output something.  Figure out what.
+    #
     # First: do files A and B have the same next key?  If so, we have
     # a change that is common across both branch paths.
 
@@ -345,37 +362,59 @@ def merge_one_changed_AB(state, key_LCA, key_AB):
     merge_one_line(state, line_LCA, line_A, line_B)
     state.consume(key_AB, line_LCA, line_A, line_B)
 
+
+def delete_one_A(state, key_LCA):
+    """
+    LCA and B both contain key_LCA but it is absent in A; process as a
+    deletion
+    """
+
+    # We can't find the LCA key anywhere in A, but it is still in
+    # B.  Do a merge; if B has changed the contents of the line
+    # and A deleted it, we still need to output a conflict,
+    # otherwise the merge will output nothing.
+
+    logging.debug("  Action: Merge delete A (missing key %s)" % key_LCA)
+
+    line_LCA = state.cursor_LCA[0]
+    line_B = state.cursor_B[0]
+
+    merge_one_line(state, line_LCA, None, line_B)
+    state.consume(key_LCA, line_LCA, None, line_B)
+    return
+
+
+def delete_one_B(state, key_LCA):
+    """
+    LCA and A both contain key_LCA but it is absent in B; process as a
+    deletion
+    """
+
+    # We can't find the LCA key anywhere in B, but it is still in
+    # A.  Do a merge; if A has changed the contents of the line
+    # and B deleted it, we still need to output a conflict,
+    # otherwise the merge will output nothing.
+
+    logging.debug("  Action: Merge delete B (missing key %s)" % key_LCA)
+
+    line_LCA = state.cursor_LCA[0]
+    line_A = state.cursor_A[0]
+
+    merge_one_line(state, line_LCA, line_A, None)
+    state.consume(key_LCA, line_LCA, line_A, None)
+    return
+
+
 def merge_one_changed_A(state, key_LCA, key_A):
     """
     LCA and the B merge branch have the same key, but A has changed;
     merge in that change.
     """
 
-    logging.debug("  Strategy: merge_one_changed_A(%s,%s)" %
-                  (key_LCA, key_A))
-
-    # Maybe the line in the LCA has simply been deleted from A?
-
-    if key_LCA and not state.cursor_A.find_next_match(key_LCA):
-
-        # We can't find the LCA key anywhere in A, but it is still in
-        # B.  Do a merge; if B has changed the contents of the line
-        # and A deleted it, we still need to output a conflict,
-        # otherwise the merge will output nothing.
-
-        logging.debug("  Action: Merge delete A (missing key %s)" % key_LCA)
-
-        line_LCA = state.cursor_LCA[0]
-        line_B = state.cursor_B[0]
-
-        merge_one_line(state, line_LCA, None, line_B)
-        state.consume(key_LCA, line_LCA, None, line_B)
-        return
-
-    # It's not a delete so we're going to output a line with key_A; it
-    # has either been inserted or moved to this position.  Let's find
-    # if there are other lines in LCA or B that we can match against
-    # for a content merge.
+    # It's not a delete (merge3_next already check for that), so we're
+    # going to output a line with key_A; it has either been inserted
+    # or moved to this position.  Let's find if there are other lines
+    # in LCA or B that we can match against for a content merge.
 
     logging.debug("  Action: Merge A (key %s)" % key_A)
 
@@ -392,31 +431,10 @@ def merge_one_changed_B(state, key_LCA, key_B):
     merge in that change.
     """
 
-    logging.debug("  Strategy: merge_one_changed_B(%s,%s)" %
-                  (key_LCA, key_B))
-
-    # Maybe the line in the LCA has simply been deleted from B?
-
-    if key_LCA and not state.cursor_B.find_next_match(key_LCA):
-
-        # We can't find the LCA key anywhere in B, but it is still in
-        # A.  Do a merge; if A has changed the contents of the line
-        # and B deleted it, we still need to output a conflict,
-        # otherwise the merge will output nothing.
-
-        logging.debug("  Action: Merge delete B (missing key %s)" % key_LCA)
-
-        line_LCA = state.cursor_LCA[0]
-        line_A = state.cursor_A[0]
-
-        merge_one_line(state, line_LCA, Line_A, None)
-        state.consume(key_LCA, line_LCA, Line_A, None)
-        return
-
-    # It's not a delete so we're going to output a line with key_B; it
-    # has either been inserted or moved to this position.  Let's find
-    # if there are other lines in LCA or A that we can match against
-    # for a content merge.
+    # We're going to output a line with key_B; it has either been
+    # inserted or moved to this position.  Let's find if there are
+    # other lines in LCA or A that we can match against for a content
+    # merge.
 
     logging.debug("  Action: Merge B (key %s)" % key_B)
 
@@ -540,6 +558,7 @@ def merge_one_line(state, line_LCA, line_A, line_B):
         except ConflictError:
             # Need to emit a conflict marker in the output here
             conflicts.add(Conflict(value_A, value_B, map))
+            value = "<conflict>"
 
         if value == None:
             value = ""

@@ -166,3 +166,37 @@ original state*; in this case, we should preserve the LCA cursor where
 it is; pushing everything in the LCA from "P" through "X" onto the
 backlog will achieve nothing.
 
+3-way ordering conflicts
+========================
+
+"Resyncing" above is only concerned with advancing LCA to maximise the
+ability to keep lines in sync with A and B.
+
+But *EXAMPLE2* above raises another question, about syncing between A
+and B when we have a 3-way ordering conflict.  Look again at the
+example in which A moves one line from the tail of the file to the
+head, and B moves two lines:
+
+state *EXAMPLE2*:
+LCA:	[P] Q R S T U V W X Y Z
+A:	[Z] P Q R S T U V W X Y
+B:	[Y] Z P Q R S T U V W X
+
+In this situation we cannot usefully advance LCA, so we need to decide
+which key out of A and B to emit next.  Yet we have a 3-way line-order
+conflict, so neither A nor B can be identified as the changed line
+just by comparing with LCA.
+
+In the case above, we should prefer to emit "Y" next; A has moved one
+line ("Z"), and B contains that same change plus an additional one
+("Y").  So we should keep "Z" as a common change and add th move of
+"Y" as an additional change introduced by B.
+
+How can we tell that B should be preferred in the example above?
+
+We use the same "relevance" distance that we used in determining
+whether to resync the LCA above.  In EXAMPLE2, A is very relevant for
+matching "soon" (it has a match in B nearby); B is much less relevant
+(it has a distant match).  So we want to *keep* the cursor at "Z" in
+A, to facilitate a match against B in the near future; matching on B
+and emitting "Y" will maximise our chance of resyncing on "Z" soon.
