@@ -53,7 +53,7 @@ class Headers:
             # of the original lists too, so that we can extract column
             # keys for each file even when keys are moving around
             # between files.
-            
+
             self.orig_LCA = self.LCA
             self.orig_A = self.A
             self.orig_B = self.B
@@ -156,7 +156,7 @@ class Headers:
             if next_LCA == next_A and next_LCA == next_B:
                 map = HeaderMap.from_state(state, next_A)
                 output.append(map)
-                
+
                 state.consume(next_LCA)
                 continue
 
@@ -213,7 +213,7 @@ class Headers:
                     output.append(map)
 
                     state.consume(next_A)
-                else: 
+                else:
                     map = HeaderMap.from_state(state, next_B)
                     output.append(map)
 
@@ -262,8 +262,8 @@ class Headers:
                     output.append(map)
 
                     state.consume(next_B)
-                    continue                    
-                    
+                    continue
+
                 # Scenario: a key has moved to a later position in
                 # side B but is still present in both sides
                 #
@@ -311,8 +311,8 @@ class Headers:
                     output.append(map)
 
                     state.consume(next_A)
-                    continue                    
-                    
+                    continue
+
                 # Scenario: a key has moved in side A but is still
                 # present in both sides
                 #
@@ -336,7 +336,7 @@ class Headers:
                 # it and move on.
                 state.consume(next_LCA)
                 continue
-            
+
             if not next_B:
                 # The next key in LCA has been deleted from B; consume
                 # it and move on.
@@ -349,12 +349,12 @@ class Headers:
             # in this case.
             map = HeaderMap.from_state(state, next_A)
             output.append(map)
-            
+
             state.consume(next_A)
-            
+
         if Debug:
             print("Final output: ", [h.name for h in output])
-    
+
         self.header_map = output
         self.headers = [h.name for h in output]
 
