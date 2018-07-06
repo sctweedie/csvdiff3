@@ -593,11 +593,15 @@ def merge_one_line(state, line_LCA, line_A, line_B):
             logging.debug("  Skipping deleted row: %s" % line_LCA.row)
             return
 
-        out_text = (line_A or line_B).text
-        # Log the output without line-terminator
-        logging.debug("  Writing exact text: %s" % out_text[0:-1])
-        state.stream.write(out_text)
-        return
+        # Don't output un-reformatted existing text if the headers
+        # require remapping fields between files!
+
+        if not state.headers.need_remapping:
+            out_text = (line_A or line_B).text
+            # Log the output without line-terminator
+            logging.debug("  Writing exact text: %s" % out_text[0:-1])
+            state.stream.write(out_text)
+            return
 
     # do field-by-field merging
     row = []

@@ -127,9 +127,16 @@ class Headers:
         Debug = False
 
         # Store in the object itself the original lists of header names
+
         self.LCA = header_LCA
         self.A = header_A
         self.B = header_B
+
+        # If any of the headers are differ then we will be doing
+        # remapping; this will disable some exact-text-match
+        # optimisations in the main merge code.
+
+        self.need_remapping = not (self.LCA == self.A == self.B)
 
         state = Headers.__State(header_LCA, header_A, header_B)
 

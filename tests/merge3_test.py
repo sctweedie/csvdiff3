@@ -473,6 +473,49 @@ class TestAsymmetricLineChanges(MergeTest):
                              "testdata/longer_trunc.csv",
                              "name")
 
+class TestHeaderChanges(MergeTest):
+    """
+    Tests for 3-way merge where the A or B side introduces changes
+    into the header/columns
+    """
+
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_header_add(self):
+        """
+        Test line merge functionality in the presence of a new column
+        """
+
+        # A moves lines around; B adds a new column
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_move1.csv",
+                             "testdata/longer_newcol.csv",
+                             "testdata/longer_newcol_mv1.csv",
+                             "name")
+
+        # And with A/B reversed
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_newcol.csv",
+                             "testdata/longer_move1.csv",
+                             "testdata/longer_newcol_mv1.csv",
+                             "name")
+
+        # A adds some new lines; B adds a new column.  New lines
+        # should get an empty default value for the new column.
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_newcol.csv",
+                             "testdata/longer_more.csv",
+                             "testdata/longer_newcol_more1.csv",
+                             "name")
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_more.csv",
+                             "testdata/longer_newcol.csv",
+                             "testdata/longer_newcol_more1.csv",
+                             "name")
+
 
 if __name__ == "__main__":
     unittest.main()
