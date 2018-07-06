@@ -4,7 +4,7 @@ import unittest
 import os
 import filecmp
 
-import csvmerge3
+import merge3
 
 class Debug:
     # Set this true to disable all tests; a single test can then be
@@ -20,7 +20,7 @@ def merge3_named(filename_LCA, filename_A, filename_B,
          open(filename_A, "rt") as file_A, \
          open(filename_B, "rt") as file_B, \
          open(filename_output, "wt") as file_output:
-        return csvmerge3.merge3(file_LCA, file_A, file_B,
+        return merge3.merge3(file_LCA, file_A, file_B,
                                 key,
                                 output = file_output)
 

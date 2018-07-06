@@ -3,7 +3,7 @@
 import sys
 import click
 import logging
-from csvfile import *
+from file import *
 from headers import Headers
 
 class ConflictError(Exception):

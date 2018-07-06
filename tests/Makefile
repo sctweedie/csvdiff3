@@ -1,6 +1,6 @@
 PYTHONENV  = PYTHONPATH=..
 PYTHON     = python3
-tests	   = headers_test.py csvfile_test.py merge3_test.py
+tests	   = headers_test.py file_test.py merge3_test.py
 
 .PHONY: test
 test: $(tests)

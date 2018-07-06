@@ -1,7 +1,7 @@
 #!usr/bin/python3
 
 import unittest
-from csvfile import *
+from file import *
 
 class TestFile(unittest.TestCase):
     simple_filename = "testdata/simple.csv"
@@ -20,7 +20,7 @@ class TestFile(unittest.TestCase):
             line = next(i)
             self.assertEqual(line.text, "apple,2\n")
             self.assertEqual(line.row, ["apple","2"])
-            
+
             line = next(i)
             self.assertEqual(line.text, "banana,3\n")
             self.assertEqual(line.row, ["banana","3"])
@@ -39,16 +39,16 @@ class TestFile(unittest.TestCase):
 
             with self.assertRaises(IndexError):
                 line = file[0]
-            
+
             with self.assertRaises(IndexError):
                 line = file[4]
 
             self.assertEqual(file.lines_by_key["apple"], [file[2]])
             self.assertEqual(file.lines_by_key["banana"], [file[3]])
-            
+
             with self.assertRaises(KeyError):
                 lines = file.lines_by_key["plum"]
-            
+
     def test_file_dups(self):
         """
         Test handling of a file containing 2 lines with the same key
@@ -62,16 +62,16 @@ class TestFile(unittest.TestCase):
             line = next(i)
             self.assertEqual(line.text, "apple,2\n")
             self.assertEqual(line.row, ["apple","2"])
-            
+
             line = next(i)
             self.assertEqual(line.text, "apple,3\n")
             self.assertEqual(line.row, ["apple","3"])
 
             self.assertEqual(file.lines_by_key["apple"], [file[2], file[3]])
-            
+
             with self.assertRaises(KeyError):
                 lines = file.lines_by_key["banana"]
-            
+
     def test_badkey(self):
         """
         Test handling of a file that does not contain the key
@@ -94,7 +94,7 @@ class TestCursor(unittest.TestCase):
             with self.assertRaises(IndexError):
                 line = cursor.getline(-2)
             self.assertEqual(cursor[-2], None)
-            
+
             self.assertEqual(cursor[-1].text, "name,count\n")
             self.assertEqual(cursor.getline(-1).text, "name,count\n")
 
@@ -114,7 +114,7 @@ class TestCursor(unittest.TestCase):
             cursor.advance()
             self.assertTrue(cursor.EOF())
             self.assertEqual(cursor.current_key(), None)
-            
+
 if __name__ == "__main__":
     unittest.main()
 

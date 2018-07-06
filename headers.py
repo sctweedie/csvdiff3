@@ -5,7 +5,7 @@
 #  Header class for maintaining the output header column names in the
 #  correct order
 
-from csvfile import Line
+from file import Line
 import logging
 
 class HeaderMap:

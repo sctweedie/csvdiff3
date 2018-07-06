@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# csvfile.py:
+# file.py:
 #
 #  Line class for reading individual CSV lines
 #
