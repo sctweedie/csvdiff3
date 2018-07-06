@@ -188,6 +188,107 @@ class TestABLineMerge(MergeTest):
                              "testdata/longer_move2.csv",
                              "name")
 
+class TestOneSidedLineChanges(MergeTest):
+    """
+    Test merging line changes (moves, adds, deletes) on just one side
+    of the merge
+    """
+
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_onesided_add(self):
+        """
+        Test handling lines added to one side
+        """
+
+        # Adding lines on the A side
+        self.run_and_compare("testdata/longer_del1.csv",
+                             self.file_longer,
+                             "testdata/longer_del1.csv",
+                             self.file_longer,
+                             "name")
+
+        self.run_and_compare("testdata/longer_del2.csv",
+                             self.file_longer,
+                             "testdata/longer_del2.csv",
+                             self.file_longer,
+                             "name")
+
+        # and on the B side
+        self.run_and_compare("testdata/longer_del1.csv",
+                             "testdata/longer_del1.csv",
+                             self.file_longer,
+                             self.file_longer,
+                             "name")
+
+        self.run_and_compare("testdata/longer_del2.csv",
+                             "testdata/longer_del2.csv",
+                             self.file_longer,
+                             self.file_longer,
+                             "name")
+
+    def test_onesided_add(self):
+        """
+        Test handling lines removed from one side
+        """
+
+        # Deleting lines from the A side
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_del1.csv",
+                             self.file_longer,
+                             "testdata/longer_del1.csv",
+                             "name")
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_del2.csv",
+                             self.file_longer,
+                             "testdata/longer_del2.csv",
+                             "name")
+
+        # and on the B side
+        self.run_and_compare(self.file_longer,
+                             self.file_longer,
+                             "testdata/longer_del1.csv",
+                             "testdata/longer_del1.csv",
+                             "name")
+
+        self.run_and_compare(self.file_longer,
+                             self.file_longer,
+                             "testdata/longer_del2.csv",
+                             "testdata/longer_del2.csv",
+                             "name")
+
+    def test_onesided_move(self):
+        """
+        Test handling lines moved in one side
+        """
+
+        # Moving lines in the A side
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_move1.csv",
+                             self.file_longer,
+                             "testdata/longer_move1.csv",
+                             "name")
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_move2.csv",
+                             self.file_longer,
+                             "testdata/longer_move2.csv",
+                             "name")
+
+        # and on the B side
+        self.run_and_compare(self.file_longer,
+                             self.file_longer,
+                             "testdata/longer_move1.csv",
+                             "testdata/longer_move1.csv",
+                             "name")
+
+        self.run_and_compare(self.file_longer,
+                             self.file_longer,
+                             "testdata/longer_move2.csv",
+                             "testdata/longer_move2.csv",
+                             "name")
+
+
 class TestLineConflict(MergeTest):
     """
     Tests for 3-way merge where the different field changes are
@@ -325,6 +426,14 @@ class TestAsymmetricLineChanges(MergeTest):
         self.run_and_compare("testdata/simple_ins2.csv",
                              "testdata/simple_ins1.csv",
                              self.file_unquoted,
+                             self.file_unquoted,
+                             "name")
+
+        # And with A/B reversed
+
+        self.run_and_compare("testdata/simple_ins2.csv",
+                             self.file_unquoted,
+                             "testdata/simple_ins1.csv",
                              self.file_unquoted,
                              "name")
 
