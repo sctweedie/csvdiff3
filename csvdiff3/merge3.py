@@ -717,7 +717,8 @@ def merge_one_line(state, line_LCA, line_A, line_B):
 def merge3(file_lca, file_a, file_b, key,
            output = sys.stdout,
            debug = True,
-           colour = False):
+           colour = False,
+           quote_all = False):
     """
     Perform a full 3-way merge on 3 given CSV files, using the given
     column name as a primary key.
@@ -746,9 +747,13 @@ def merge3(file_lca, file_a, file_b, key,
     # So instead, just force the dialect for the output.  We can add
     # additional options here later.
 
+    quoting = csv.QUOTE_MINIMAL
+    if quote_all:
+        quoting = csv.QUOTE_ALL
+
     writer = csv.writer(output,
                         lineterminator = "\n",
-                        quoting = csv.QUOTE_ALL)
+                        quoting = quoting)
 
     # If all three input files have the exact same header text, then
     # output the header as that text verbatim;

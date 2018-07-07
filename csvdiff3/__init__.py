@@ -20,12 +20,14 @@ import colorama
               "if outputting to a tty)")
 @click.option("-k", "--key", required=True)
 @click.option("-d", "--debug", is_flag = True, default=False)
+@click.option("-q", "--quote-all", is_flag = True, default=False,
+              help = "Quota all fields in output lines")
 @click.option("-o", "--output-file", type=click.Path(),
               default = None,
               help = "Save merged results to given output file (default is stdout)")
 
 def merge3_cli(filename_lca, filename_a, filename_b,
-               colour, key, debug, output_file):
+               colour, key, debug, quote_all, output_file):
 
     # If an output filename has been specified, redirect output to a
     # temporary file and then we will copy it over at the end.  We
@@ -43,7 +45,8 @@ def merge3_cli(filename_lca, filename_a, filename_b,
             rc = merge3.merge3(filename_lca, filename_a, filename_b, key,
                                output = temp_output,
                                debug = debug,
-                               colour = colour)
+                               colour = colour,
+                               quote_all = quote_all)
 
             temp_name = temp_output.name
             temp_output.flush()
@@ -53,7 +56,8 @@ def merge3_cli(filename_lca, filename_a, filename_b,
 
         rc = merge3.merge3(filename_lca, filename_a, filename_b, key,
                            debug = debug,
-                           colour = colour)
+                           colour = colour,
+                           quote_all = quote_all)
 
     sys.exit(rc)
 
