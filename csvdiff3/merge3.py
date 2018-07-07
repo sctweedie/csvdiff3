@@ -82,7 +82,7 @@ class Conflicts:
     def line_to_str(line, cursor):
         if not line:
             return "Deleted @%d" % cursor.linenr
-        return "@%d" % line.linenr
+        return "@%d (%s)" % (line.linenr, line.row[cursor.file.key_index])
 
     def write(self, state):
         """
