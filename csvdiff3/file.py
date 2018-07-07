@@ -190,6 +190,14 @@ class Cursor:
         """
         Advance the current line position to the next line in a file
         """
+
+        # First remove the line from the per-key line lookup
+        line = self[0]
+        if not line.is_consumed:
+            key = self.current_key()
+            found_line = self.file.lines_by_key[key].pop(0)
+            assert line == found_line
+
         if self.linenr <= self.file.last_line:
             self.linenr += 1
 
