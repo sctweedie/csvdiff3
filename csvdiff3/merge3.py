@@ -509,11 +509,25 @@ def lookup_field(line, column):
 
     Returns None if either the column or the line is None
     """
+
+    # During merge, it is not guaranteed that each input file to the
+    # merge has a matching line...
+
     if not line:
         return None
+
+    # ...or that the input line has a column of the given name...
+
     if column == None:
         return None
-    return line.row[column]
+
+    # ...or that the line in question bothers to supply every required
+    # column
+
+    try:
+        return line.row[column]
+    except IndexError:
+        return None
 
 def changed_line_is_compatible(before, after):
     """
