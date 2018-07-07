@@ -15,14 +15,16 @@ class Debug:
     skip_tests = False
 
 def merge3_named(filename_LCA, filename_A, filename_B,
-                 filename_output, key):
+                 filename_output, key,
+                 **kwargs):
     with open(filename_LCA, "rt") as file_LCA, \
          open(filename_A, "rt") as file_A, \
          open(filename_B, "rt") as file_B, \
          open(filename_output, "wt") as file_output:
         return merge3.merge3(file_LCA, file_A, file_B,
-                                key,
-                                output = file_output)
+                             key,
+                             output = file_output,
+                             **kwargs)
 
 def keep_copy(testfile, savefile):
     """
@@ -52,13 +54,14 @@ class MergeTest(unittest.TestCase):
 
     def run_and_compare(self,
                         file_LCA, file_A, file_B,
-                        file_expected, key):
+                        file_expected, key,
+                        **kwargs):
         """
         Run a single merge3 and check the output against the contents
         of a given file.
         """
 
-        merge3_named(file_LCA, file_A, file_B, self.file_output, key)
+        merge3_named(file_LCA, file_A, file_B, self.file_output, key, **kwargs)
         files_equal = filecmp.cmp(self.file_output, file_expected, shallow=False)
         if not files_equal:
             keep_copy(self.file_output, self.failure_output)
