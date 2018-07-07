@@ -519,6 +519,26 @@ class TestHeaderChanges(MergeTest):
                              "testdata/longer_newcol_more1.csv",
                              "name")
 
+class TestReformatAll(MergeTest):
+    """
+    Tests for forced reformatting of all lines
+    """
+
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_reformat_all(self):
+        """
+        Test handling a line which is unchanged on both sides, but
+        where we have asked for a full reformat
+        """
+
+        self.run_and_compare(self.file_unquoted,
+                             self.file_unquoted,
+                             self.file_unquoted,
+                             self.file_fully_quoted,
+                             "name",
+                             quote_all = True,
+                             reformat_all = True)
+
 
 if __name__ == "__main__":
     unittest.main()

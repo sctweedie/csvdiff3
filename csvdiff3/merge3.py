@@ -18,7 +18,9 @@ class UnhandledError(Exception):
 class __State:
     def __init__(self, file_LCA, file_A, file_B,
                  headers, stream, writer,
-                 colour = False):
+                 colour = False,
+                 reformat_all = False):
+
         self.file_LCA = file_LCA
         self.file_A = file_A
         self.file_B = file_B
@@ -34,6 +36,7 @@ class __State:
         self.file_has_conflicts = False
 
         self.colour = colour
+        self.reformat_all = reformat_all
 
     def EOF(self):
         if not self.cursor_LCA.EOF():
@@ -661,10 +664,10 @@ def merge_one_line(state, line_LCA, line_A, line_B):
             logging.debug("  Skipping deleted row: %s" % line_LCA.row)
             return
 
-        # Don't output un-reformatted existing text if the headers
-        # require remapping fields between files!
+        # Don't output un-reformatted existing text if we are forcing
+        # a full reformat
 
-        if not state.headers.need_remapping:
+        if not state.reformat_all:
             out_text = (line_A or line_B).text
             # Log the output without line-terminator
             logging.debug("  Writing exact text: %s" % out_text[0:-1])
@@ -718,7 +721,8 @@ def merge3(file_lca, file_a, file_b, key,
            output = sys.stdout,
            debug = True,
            colour = False,
-           quote_all = False):
+           quote_all = False,
+           reformat_all = False):
     """
     Perform a full 3-way merge on 3 given CSV files, using the given
     column name as a primary key.
@@ -735,6 +739,12 @@ def merge3(file_lca, file_a, file_b, key,
     headers = Headers(file_LCA.header.row,
                       file_A.header.row,
                       file_B.header.row)
+
+    # Always reformat all output lines if the headers have changed at
+    # all between files
+
+    if headers.need_remapping:
+        reformat_all = True
 
     # It would be great if we could reliably sniff dialect from the
     # input.
@@ -760,7 +770,8 @@ def merge3(file_lca, file_a, file_b, key,
     #
     # otherwise, we output the intelligent merge of the differences
 
-    if file_LCA.header.text == file_A.header.text == file_B.header.text:
+    if (not reformat_all) and \
+       file_LCA.header.text == file_A.header.text == file_B.header.text:
         output.write(file_A.header.text)
     else:
         writer.writerow(headers.headers)
@@ -768,7 +779,8 @@ def merge3(file_lca, file_a, file_b, key,
     # Initialise the merging state
 
     state = __State(file_LCA, file_A, file_B, headers, output, writer,
-                    colour = colour)
+                    colour = colour,
+                    reformat_all = reformat_all)
 
     while not state.EOF():
         merge3_next(state)
