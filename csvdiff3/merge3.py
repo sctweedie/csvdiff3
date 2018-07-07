@@ -2,6 +2,7 @@
 
 import sys
 import logging
+import re
 from .file import *
 from .headers import Headers
 
@@ -79,10 +80,20 @@ class Conflicts:
         self.conflicts.append(conflict)
 
     @staticmethod
-    def line_to_str(line, cursor):
+    def line_to_str(line, cursor_LCA, cursor_line):
         if not line:
-            return "Deleted @%d" % cursor.linenr
-        return "@%d (%s)" % (line.linenr, line.row[cursor.file.key_index])
+            return "Deleted @%d" % cursor_LCA.linenr
+        return "@%d (%s)" % (line.linenr, line.row[cursor_line.file.key_index])
+
+    newline_regexp = re.compile("\n|\r\n")
+
+    @staticmethod
+    def quote_newlines(text, replacement = "\\\\n"):
+        """
+        Prepare a key for printing, replacing any EOL/newline
+        sequences with "\n" to keep the output on a single line.
+        """
+        return Conflicts.newline_regexp.sub(replacement, format(text))
 
     def write(self, state):
         """
@@ -90,11 +101,12 @@ class Conflicts:
         """
         linestr = ">>>>>> %s %s\n" % \
             (state.cursor_A.file.filename,
-             self.line_to_str(self.line_A, state.cursor_LCA))
+             self.line_to_str(self.line_A, state.cursor_LCA, state.cursor_A))
         state.stream.write(linestr)
 
         for c in self:
-            linestr = ">>>>>> %s = %s\n" % (c.column.name, c.val_A)
+            linestr = ">>>>>> %s = %s\n" % \
+                (c.column.name, self.quote_newlines(c.val_A))
             state.stream.write(linestr)
 
         if self.line_A:
@@ -102,11 +114,12 @@ class Conflicts:
 
         linestr = "====== %s %s\n" % \
             (state.cursor_B.file.filename,
-             self.line_to_str(self.line_B, state.cursor_LCA))
+             self.line_to_str(self.line_B, state.cursor_LCA, state.cursor_B))
         state.stream.write(linestr)
 
         for c in self:
-            linestr = "====== %s = %s\n" % (c.column.name, c.val_B)
+            linestr = "====== %s = %s\n" % \
+                (c.column.name, self.quote_newlines(c.val_B))
             state.stream.write(linestr)
 
         if self.line_B:
