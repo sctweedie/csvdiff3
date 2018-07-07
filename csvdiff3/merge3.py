@@ -3,6 +3,9 @@
 import sys
 import logging
 import re
+
+from colorama import Fore, Style
+
 from .file import *
 from .headers import Headers
 
@@ -14,7 +17,8 @@ class UnhandledError(Exception):
 
 class __State:
     def __init__(self, file_LCA, file_A, file_B,
-                 headers, stream, writer):
+                 headers, stream, writer,
+                 colour = False):
         self.file_LCA = file_LCA
         self.file_A = file_A
         self.file_B = file_B
@@ -28,6 +32,8 @@ class __State:
         self.cursor_B = Cursor(file_B)
 
         self.file_has_conflicts = False
+
+        self.colour = colour
 
     def EOF(self):
         if not self.cursor_LCA.EOF():
@@ -47,6 +53,21 @@ class __State:
         self.cursor_LCA.consume(key, line_LCA)
         self.cursor_A.consume(key, line_A)
         self.cursor_B.consume(key, line_B)
+
+    def text_if_colour_enabled(self, text):
+        if not self.colour:
+            return ""
+        return text
+
+    def text_red(self):
+        return self.text_if_colour_enabled(Fore.RED)
+
+    def text_green(self):
+        return self.text_if_colour_enabled(Fore.GREEN)
+
+    def text_reset(self):
+        return self.text_if_colour_enabled(Style.RESET_ALL)
+
 
 class Conflict:
     """
@@ -99,18 +120,29 @@ class Conflicts:
         """
         Write a set of conflicts for a single line to the output.
         """
+
+        # Side A first
+
         linestr = ">>>>>> %s %s\n" % \
             (state.cursor_A.file.filename,
              self.line_to_str(self.line_A, state.cursor_LCA, state.cursor_A))
         state.stream.write(linestr)
 
         for c in self:
-            linestr = ">>>>>> %s = %s\n" % \
-                (c.column.name, self.quote_newlines(c.val_A))
+            linestr = ">>>>>> %s = %s%s%s\n" % \
+                (c.column.name,
+                 state.text_red(),
+                 self.quote_newlines(c.val_A),
+                 state.text_reset()
+                )
             state.stream.write(linestr)
 
         if self.line_A:
+            state.stream.write(state.text_red())
             state.stream.write(self.line_A.text)
+            state.stream.write(state.text_reset())
+
+        # Side B next
 
         linestr = "====== %s %s\n" % \
             (state.cursor_B.file.filename,
@@ -118,14 +150,22 @@ class Conflicts:
         state.stream.write(linestr)
 
         for c in self:
-            linestr = "====== %s = %s\n" % \
-                (c.column.name, self.quote_newlines(c.val_B))
+            linestr = "====== %s = %s%s%s\n" % \
+                (c.column.name,
+                 state.text_green(),
+                 self.quote_newlines(c.val_B),
+                 state.text_reset()
+                )
             state.stream.write(linestr)
 
         if self.line_B:
+            state.stream.write(state.text_green())
             state.stream.write(self.line_B.text)
+            state.stream.write(state.text_reset())
 
+        state.stream.write(state.text_reset())
         linestr = "<<<<<<\n"
+
         state.stream.write(linestr)
 
 
@@ -676,7 +716,8 @@ def merge_one_line(state, line_LCA, line_A, line_B):
 
 def merge3(file_lca, file_a, file_b, key,
            output = sys.stdout,
-           debug = True):
+           debug = True,
+           colour = False):
     """
     Perform a full 3-way merge on 3 given CSV files, using the given
     column name as a primary key.
@@ -721,7 +762,8 @@ def merge3(file_lca, file_a, file_b, key,
 
     # Initialise the merging state
 
-    state = __State(file_LCA, file_A, file_B, headers, output, writer)
+    state = __State(file_LCA, file_A, file_B, headers, output, writer,
+                    colour = colour)
 
     while not state.EOF():
         merge3_next(state)
