@@ -681,14 +681,20 @@ def merge3(file_lca, file_a, file_b, key,
                       file_A.header.row,
                       file_B.header.row)
 
-    # We do not currently do any merging of dialect; rather, we always
-    # just preserve the dialect of the A-side (usually, mainline)
-    # branch file
+    # It would be great if we could reliably sniff dialect from the
+    # input.
+    #
+    # But reading the header is not enough to establish that reliably
+    # (eg. the reader ignores line termination and cannot robustly
+    # detect escapechar), and if we don't set these, output may fail
+    # later on.
+    #
+    # So instead, just force the dialect for the output.  We can add
+    # additional options here later.
 
-    dialect = csv.Sniffer().sniff(file_A.header.text)
-    # The reader ignores line-terminators, so force that to unix-style by default
-    dialect.lineterminator = "\n"
-    writer = csv.writer(output, dialect=dialect)
+    writer = csv.writer(output,
+                        lineterminator = "\n",
+                        quoting = csv.QUOTE_ALL)
 
     # If all three input files have the exact same header text, then
     # output the header as that text verbatim;
