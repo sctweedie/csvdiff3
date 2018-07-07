@@ -80,6 +80,29 @@ class TestFile(unittest.TestCase):
             with self.assertRaises(KeyError):
                 file = CSVFile(file, "notmyname")
 
+    def test_splitline(self):
+        """
+        Test handling of a file containing a key split across two
+        lines
+        """
+        with open("testdata/split.csv", "rt") as file:
+            file = CSVFile(file, "name")
+
+            self.assertEqual(file.header.row, ["name","count"])
+
+            i = iter(file)
+            line = next(i)
+            self.assertEqual(line.text, 'apple,"2\nand more here"\n')
+            self.assertEqual(line.row, ["apple","2\nand more here"])
+
+            line = next(i)
+            self.assertEqual(line.text, 'banana,"3\nand even more"\n')
+            self.assertEqual(line.row, ["banana","3\nand even more"])
+
+            self.assertEqual(file.lines_by_key["apple"], [file[2]])
+            self.assertEqual(file.lines_by_key["banana"], [file[3]])
+
+
 class TestCursor(unittest.TestCase):
     simple_filename = "testdata/simple.csv"
 

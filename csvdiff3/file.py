@@ -40,13 +40,20 @@ class FileReader:
 
     def __init__(self, stream):
         self.stream = stream
+        self.lastlines = ""
 
     def __iter__(self):
         while True:
-            self.lastline = self.stream.readline()
-            if self.lastline == "":
+            line = self.stream.readline()
+            if line == "":
                 break
-            yield self.lastline
+            self.lastlines += line
+            yield line
+
+    def get_last_lines(self):
+        lines = self.lastlines
+        self.lastlines = ""
+        return lines
 
 class CSVLineReader:
     """
@@ -62,7 +69,7 @@ class CSVLineReader:
 
     def __iter__(self):
         for row in self.reader:
-            yield (self.file.lastline, row)
+            yield (self.file.get_last_lines(), row)
 
 class CSVHeaderFile:
     """
