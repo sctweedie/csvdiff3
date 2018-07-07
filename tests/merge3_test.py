@@ -519,6 +519,45 @@ class TestHeaderChanges(MergeTest):
                              "testdata/longer_newcol_more1.csv",
                              "name")
 
+class TestShortLines(MergeTest):
+    """
+    Tests for handling short lines (which are missing some columns at
+    the end of the line.)
+    """
+
+    #@unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_header_add(self):
+        """
+        Test handling a line which is missing content but has no
+        conflict on the other side.  Treat that as deleting a field.
+        """
+
+        # A is unchanged; B includes a short line.  Output will
+        # include that line, reformatted.
+
+        self.run_and_compare(self.file_unquoted,
+                             self.file_unquoted,
+                             "testdata/simple_shortline.csv",
+                             "testdata/simple_shortline_repaired.csv",
+                             "name")
+
+        # A changes the field; B includes a short line.  Output needs
+        # to reflect a conflict.
+
+        self.run_and_compare(self.file_unquoted,
+                             "testdata/simple_changed.csv",
+                             "testdata/simple_shortline.csv",
+                             "testdata/simple_shortline_conflict.csv",
+                             "name")
+
+        # And with A/B reversed.
+
+        self.run_and_compare(self.file_unquoted,
+                             "testdata/simple_shortline.csv",
+                             "testdata/simple_changed.csv",
+                             "testdata/simple_shortline_conflict2.csv",
+                             "name")
+
 class TestReformatAll(MergeTest):
     """
     Tests for forced reformatting of all lines
