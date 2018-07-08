@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="csvdiff3",
-    version="0.99.1",
+    version="0.99.2",
     author="Stephen Tweedie",
     author_email="sct@redhat.com",
     description="3-way CSV file merging utility",
@@ -16,6 +16,7 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'csvmerge3 = csvdiff3:merge3_cli',
+            'csvhooks = csvdiff3.tools:csvhooks_cli'
         ],
     },
     classifiers=(
