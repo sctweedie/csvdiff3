@@ -13,11 +13,11 @@ from .options import Options
 
 @click.option("-k", "--key", default = None,
               help = "File is indexed by a given primary key " + \
-              "(a column with this name must exist")
+              "(a column with this name must exist)")
 @click.option("-q", "--quote",
               type = click.Choice(["minimal", "full"]),
               default = "minimal",
-              help = "Selects field quoting style for output CSV")
+              help = "Selects field quoting style for output CSV files")
 @click.option("-l", "--lineterminator",
               type = click.Choice(["native", "dos","unix"]),
               default = "unix",
