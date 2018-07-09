@@ -71,6 +71,32 @@ class __State:
     def text_reset(self):
         return self.text_if_colour_enabled(Style.RESET_ALL)
 
+    @staticmethod
+    def dump_one_cursor(name, cursor):
+        logging.debug("cursor %s at linenr %d:" %
+                      (name, cursor.linenr))
+
+        if cursor.EOF():
+            logging.debug("  EOF")
+            return
+
+        line = cursor[0]
+        key = line.row[cursor.file.key_index]
+
+        logging.debug("  linenr %d, key %s, consumed %s" %
+                      (line.linenr, key, line.is_consumed))
+        if key in cursor.backlog:
+            for b in cursor.backlog[key]:
+                if b is line:
+                    logging.debug("  line found in backlog")
+
+    def dump_current_state(self):
+        """
+        On assert failure, dump the current merge state to the debug log.
+        """
+        self.dump_one_cursor("LCA", self.cursor_LCA)
+        self.dump_one_cursor("A", self.cursor_A)
+        self.dump_one_cursor("B", self.cursor_B)
 
 class Conflict:
     """
@@ -782,8 +808,12 @@ def merge3(file_lca, file_a, file_b, key,
                     colour = colour,
                     reformat_all = reformat_all)
 
-    while not state.EOF():
-        merge3_next(state)
+    try:
+        while not state.EOF():
+            merge3_next(state)
+    except AssertionError:
+        state.dump_current_state()
+        raise
 
     state.cursor_LCA.assert_finished()
     state.cursor_A.assert_finished()
