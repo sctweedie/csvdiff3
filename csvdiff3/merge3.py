@@ -678,6 +678,22 @@ def merge_one_line(state, line_LCA, line_A, line_B):
 
     is_delete = bool(line_LCA) and not (line_A and line_B)
 
+    # Check that we have the right key on all three lines.  We
+    # *really* do not want to merge the wrong lines by mistake!
+
+    key_LCA = line_LCA and line_LCA.row[state.cursor_LCA.file.key_index]
+    key_A = line_A and line_A.row[state.cursor_A.file.key_index]
+    key_B = line_B and line_B.row[state.cursor_B.file.key_index]
+
+    key = key_LCA or key_A or key_B
+
+    if key_LCA:
+        assert key_LCA == key
+    if key_A:
+        assert key_A == key
+    if key_B:
+        assert key_B == key
+
     # First, check if the corresponding lines of each input file have
     # the exact same text.  If they are all the same, then that is our
     # next output line, and we will avoid reformatting.
