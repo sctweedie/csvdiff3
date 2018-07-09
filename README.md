@@ -22,3 +22,6 @@ It can:
   have no effect on the contents of the fields), preserving formatting
   in lines which are unchanged but reformatting lines on merge if
   lines have changed
+
+The package also includes a csvhook CLI tool to provide basic CSV
+validation/formatting for use in git hooks and filters.

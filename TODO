@@ -3,4 +3,7 @@ TODO
 
 Add tests for:
 * Duplicated keys in the input
+* Key removed on one side and moved in the other
+* csvhooks CLI tools
+ * Filter mode, overwrite onto input file, etc.
 
