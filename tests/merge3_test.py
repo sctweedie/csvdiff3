@@ -555,7 +555,7 @@ class TestShortLines(MergeTest):
     the end of the line.)
     """
 
-    #@unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
     def test_header_add(self):
         """
         Test handling a line which is missing content but has no
@@ -586,6 +586,39 @@ class TestShortLines(MergeTest):
                              "testdata/simple_shortline.csv",
                              "testdata/simple_changed.csv",
                              "testdata/simple_shortline_conflict2.csv",
+                             "name")
+
+class TestDupKeys(MergeTest):
+    """
+    Tests for handling duplicated keys.  We should obey a simple rule:
+    the occurrences of the same key in each file are matched together
+    in the order they appear for merge.
+    """
+
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_dup_keys(self):
+        """
+        Test handling a line which is missing content but has no
+        conflict on the other side.  Treat that as deleting a field.
+        """
+
+        # A and B both duplicate a (different) line from LCA
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_dup1.csv",
+                             "testdata/longer_dup2.csv",
+                             "testdata/longer_dupmerge.csv",
+                             "name")
+
+        # A and B both duplicate a (different) line from LCA.  The
+        # output is almost the same, but demonstrates that when we
+        # have out-of-order keys appearing differently at the same
+        # position in A and B, we pick A first.
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_dup2.csv",
+                             "testdata/longer_dup1.csv",
+                             "testdata/longer_dupmerge2.csv",
                              "name")
 
 class TestReformatAll(MergeTest):

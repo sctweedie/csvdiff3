@@ -2,7 +2,6 @@ TODO
 ====
 
 Add tests for:
-* Duplicated keys in the input
 * csvhooks CLI tools
  * Filter mode, overwrite onto input file, etc.
 
