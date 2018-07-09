@@ -519,6 +519,36 @@ class TestHeaderChanges(MergeTest):
                              "testdata/longer_newcol_more1.csv",
                              "name")
 
+class TestAsymmetricLineChangesWithConflict(MergeTest):
+    """
+    Tests for 3-way merge where the A and B sides are adding, deleting
+    or moving lines in different ways.  Also includes conflicts where
+    a line is deleted on one side and moved on another, sometimes with
+    new data contents on the moved line (which should result in a
+    conflict.)
+    """
+
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_move_delete_conflict(self):
+        # Multiple moves, deletes and changes of the same lines on
+        # different sides.
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_movdel1.csv",
+                             "testdata/longer_movdel2.csv",
+                             "testdata/longer_movdel_merged.csv",
+                             "name")
+
+        # With A and B swapped, the output should be the same except
+        # that content will swap sides within conflict markers.
+
+        self.run_and_compare(self.file_longer,
+                             "testdata/longer_movdel2.csv",
+                             "testdata/longer_movdel1.csv",
+                             "testdata/longer_movdel_merged2.csv",
+                             "name")
+
+
 class TestShortLines(MergeTest):
     """
     Tests for handling short lines (which are missing some columns at

@@ -1,0 +1,18 @@
+name,count
+banana,3
+>>>>>> input Deleted @4
+>>>>>> count = None
+====== input @3 (grape)
+====== count = 7
+grape,7
+<<<<<<
+pear,4
+>>>>>> input @8 (plum)
+>>>>>> count = 55
+plum,55
+====== input Deleted @5
+====== count = None
+<<<<<<
+orange,8
+strawberry,9
+blueberry,10
