@@ -31,7 +31,9 @@ class Options:
 
         if self.quote == "minimal":
             kwargs["quoting"] = csv.QUOTE_MINIMAL
-        elif self.quote == "full":
+        elif self.quote == "all":
             kwargs["quoting"] = csv.QUOTE_ALL
+        elif self.quote == "nonnumeric":
+            kwargs["quoting"] = csv.QUOTE_NONNUMERIC
 
         return kwargs

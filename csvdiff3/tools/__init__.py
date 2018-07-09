@@ -15,7 +15,7 @@ from .options import Options
               help = "File is indexed by a given primary key " + \
               "(a column with this name must exist)")
 @click.option("-q", "--quote",
-              type = click.Choice(["minimal", "full"]),
+              type = click.Choice(["minimal", "nonnumeric", "all"]),
               default = "minimal",
               help = "Selects field quoting style for output CSV files")
 @click.option("-l", "--lineterminator",

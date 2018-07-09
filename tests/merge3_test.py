@@ -575,7 +575,7 @@ class TestReformatAll(MergeTest):
                              self.file_unquoted,
                              self.file_fully_quoted,
                              "name",
-                             quote_all = True,
+                             quote = "all",
                              reformat_all = True)
 
 

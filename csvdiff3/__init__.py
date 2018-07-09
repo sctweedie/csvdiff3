@@ -24,8 +24,14 @@ import colorama
               "(used to identify matching lines across merged files)")
 @click.option("-d", "--debug", is_flag = True, default=False,
               help = "Enable logging in DEBUG.log")
-@click.option("-q", "--quote-all", is_flag = True, default=False,
-              help = "Quota all fields in output lines")
+@click.option("-q", "--quote",
+              type = click.Choice(["minimal", "nonnumeric", "all"]),
+              default = "minimal",
+              help = "Selects field quoting style for output CSV files")
+@click.option("-l", "--lineterminator",
+              type = click.Choice(["native", "dos","unix"]),
+              default = "unix",
+              help = "Selects line termination for output CSV files")
 @click.option("-r", "--reformat-all", is_flag = True, default=False,
               help = "Reformat all lines in output (default is " + \
               "reformat only changed lines)")
@@ -35,7 +41,7 @@ import colorama
 
 def merge3_cli(filename_lca, filename_a, filename_b,
                colour, key,
-               debug, quote_all, reformat_all,
+               debug, quote, lineterminator, reformat_all,
                output_file):
 
     # If an output filename has been specified, redirect output to a
@@ -55,7 +61,8 @@ def merge3_cli(filename_lca, filename_a, filename_b,
                                output = temp_output,
                                debug = debug,
                                colour = colour,
-                               quote_all = quote_all,
+                               quote = quote,
+                               lineterminator = lineterminator,
                                reformat_all = reformat_all)
 
             temp_name = temp_output.name
@@ -67,7 +74,8 @@ def merge3_cli(filename_lca, filename_a, filename_b,
         rc = merge3.merge3(filename_lca, filename_a, filename_b, key,
                            debug = debug,
                            colour = colour,
-                           quote_all = quote_all,
+                           quote = quote,
+                           lineterminator = lineterminator,
                            reformat_all = reformat_all)
 
     sys.exit(rc)

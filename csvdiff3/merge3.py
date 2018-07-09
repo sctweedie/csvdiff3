@@ -8,6 +8,7 @@ from colorama import Fore, Style
 
 from .file import *
 from .headers import Headers
+from .tools.options import Options
 
 class ConflictError(Exception):
     pass
@@ -763,7 +764,8 @@ def merge3(file_lca, file_a, file_b, key,
            output = sys.stdout,
            debug = True,
            colour = False,
-           quote_all = False,
+           quote = "minimal",
+           lineterminator = "unix",
            reformat_all = False):
     """
     Perform a full 3-way merge on 3 given CSV files, using the given
@@ -799,13 +801,15 @@ def merge3(file_lca, file_a, file_b, key,
     # So instead, just force the dialect for the output.  We can add
     # additional options here later.
 
-    quoting = csv.QUOTE_MINIMAL
-    if quote_all:
-        quoting = csv.QUOTE_ALL
+    # Collect dialect options into the shared tools Option class
 
-    writer = csv.writer(output,
-                        lineterminator = "\n",
-                        quoting = quoting)
+    options = Options()
+    options.quote = quote
+    options.lineterminator = lineterminator
+
+    dialect_args = options.csv_kwargs()
+
+    writer = csv.writer(output, **dialect_args)
 
     # If all three input files have the exact same header text, then
     # output the header as that text verbatim;
