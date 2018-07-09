@@ -460,7 +460,7 @@ def delete_one_A(state, key_LCA):
     logging.debug("  Action: Merge delete A (missing key %s)" % key_LCA)
 
     line_LCA = state.cursor_LCA[0]
-    line_B = state.cursor_B[0]
+    line_B = state.cursor_B.find_next_match(key_LCA)
 
     merge_one_line(state, line_LCA, None, line_B)
     state.consume(key_LCA, line_LCA, None, line_B)
@@ -481,7 +481,7 @@ def delete_one_B(state, key_LCA):
     logging.debug("  Action: Merge delete B (missing key %s)" % key_LCA)
 
     line_LCA = state.cursor_LCA[0]
-    line_A = state.cursor_A[0]
+    line_A = state.cursor_A.find_next_match(key_LCA)
 
     merge_one_line(state, line_LCA, line_A, None)
     state.consume(key_LCA, line_LCA, line_A, None)
