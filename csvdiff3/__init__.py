@@ -18,8 +18,12 @@ import colorama
               default = None,
               help = "Colourise conflicts in output (default is True " + \
               "if outputting to a tty)")
-@click.option("-k", "--key", required=True)
-@click.option("-d", "--debug", is_flag = True, default=False)
+@click.option("-k", "--key",
+              required=True,
+              help = "Identifies column name for the CSV files' primary key " + \
+              "(used to identify matching lines across merged files)")
+@click.option("-d", "--debug", is_flag = True, default=False,
+              help = "Enable logging in DEBUG.log")
 @click.option("-q", "--quote-all", is_flag = True, default=False,
               help = "Quota all fields in output lines")
 @click.option("-r", "--reformat-all", is_flag = True, default=False,
