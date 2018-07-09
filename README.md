@@ -29,7 +29,7 @@ validation/formatting for use in git hooks and filters.
 
 Use
 
-    ./setup.py install [--user]
+	python3 setup.py install [--user]
 
 to install the package.
 
