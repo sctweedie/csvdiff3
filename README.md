@@ -4,7 +4,7 @@ The csvdiff3 package offers the csvmerge3 command, which performs
 intelligent 3-way merging between CSV files.  2- and 3-way diff are
 planned but are not currently part of the package.
 
-cvsmerge3 can:
+csvmerge3 can:
 
 * Automatically merge changes in file structure, such as added,
   removed or moved columns;
@@ -22,7 +22,7 @@ cvsmerge3 can:
   in lines which are unchanged but reformatting lines on merge if
   lines have changed
 
-The package also includes a csvhook CLI tool to provide basic CSV
+The package also includes a csvhooks CLI tool to provide basic CSV
 validation/formatting for use in git hooks and filters.
 
 ## Getting started
