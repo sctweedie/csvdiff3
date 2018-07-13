@@ -1,1 +1,1 @@
-__all__ = ["file_test", "headers_test", "merge3_test"]
+__all__ = ["file_test", "headers_test", "merge3_test", "hooks_test"]
