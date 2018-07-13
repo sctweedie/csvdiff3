@@ -33,16 +33,18 @@ def csvhooks(ctx, key, quote, lineterminator):
 # "validate" subcommand
 
 @csvhooks.command("validate")
-@click.argument("filename", type=click.File("rt"),
+@click.argument("file", type=click.File("rt"),
                 required = False)
 @click.pass_context
 
-def validate_cli(ctx, filename):
-    if not filename:
-        filename = sys.stdin
+def validate_cli(ctx, file):
+    if file:
+        filename = file.name
+    else:
+        file, filename = (sys.stdin, "<stdin>")
 
     options = ctx.obj
-    rc = tools.validate(options, filename)
+    rc = tools.validate(options, file, filename)
     sys.exit(rc)
 
 # "reformat" subcommand

@@ -29,19 +29,19 @@ def __check_key(reader, filename, key):
 
     return True
 
-def validate(options, file):
+def validate(options, file, filename):
     key = options.key
 
     reader = csv.reader(file)
 
-    if not __check_key(reader, file.name, key):
+    if not __check_key(reader, filename, key):
         return 1
 
     try:
         for line, _ in enumerate(reader, 1):
             pass
     except:
-        eprint ("Error: file %s failed to parse at line %d" % (file.name, line))
+        eprint ("Error: file %s failed to parse at line %d" % (filename, line))
         return 1
 
     return 0
