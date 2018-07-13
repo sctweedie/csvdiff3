@@ -187,6 +187,123 @@ class TestReformatIO(TestOnCli):
             test_output = file.read()
             self.assertEqual (test_output, result.output)
 
+class TestReformatContents(TestOnCli):
+    """
+    Test the reformat CLI: test the input/output functionality
+    (ability to work as a filter, safely overwrite existing files,
+    write to new files etc.)
+    """
+
+    def tearDown(self):
+        try:
+            os.unlink(self.output_tmpfile)
+        except FileNotFoundError:
+            pass
+
+    def test_reformat_quoting(self):
+        """
+        Test reformatting quotation style onto a new output file
+        """
+        inpath = test_path("simple.csv")
+        outpath = self.output_tmpfile
+        partial_quotepath = test_path("simple_requoted.csv")
+        quotepath = test_path("simple_quoted.csv")
+
+        # Test reformatting from unquoted to fully quoted
+
+        result = self.run_one(["--quote=all",
+                               "--lineterminator=unix",
+                               "reformat",
+                               inpath,
+                               outpath])
+        self.assertEqual (result.exit_code, 0)
+        self.assertTrue (filecmp.cmp(outpath, quotepath, shallow=False))
+
+        # ..and from full back to unquoted
+
+        result = self.run_one(["--quote=minimal",
+                               "--lineterminator=unix",
+                               "reformat",
+                               quotepath,
+                               outpath])
+        self.assertEqual (result.exit_code, 0)
+        self.assertTrue (filecmp.cmp(outpath, inpath, shallow=False))
+
+        # ..and finally from partially quoted to unquoted
+
+        result = self.run_one(["--quote=minimal",
+                               "--lineterminator=unix",
+                               "reformat",
+                               partial_quotepath,
+                               outpath])
+        self.assertEqual (result.exit_code, 0)
+        self.assertTrue (filecmp.cmp(outpath, inpath, shallow=False))
+
+    def test_reformat_lineterminator(self):
+        """
+        Test reformatting line-termination style onto a new output file
+        """
+        inpath = test_path("simple.csv")
+        outpath = self.output_tmpfile
+        dospath = test_path("simple_dos.csv")
+
+        # Test reformatting from unix to unix line termination, should
+        # be no change
+
+        result = self.run_one(["--lineterminator=unix",
+                               "reformat",
+                               inpath,
+                               outpath])
+        self.assertEqual (result.exit_code, 0)
+        self.assertTrue (filecmp.cmp(outpath, inpath, shallow=False))
+
+        # Test reformatting from unix to dos line termination
+
+        result = self.run_one(["--lineterminator=dos",
+                               "reformat",
+                               inpath,
+                               outpath])
+        self.assertEqual (result.exit_code, 0)
+        self.assertTrue (filecmp.cmp(outpath, dospath, shallow=False))
+
+        # Test reformatting from dos to unix line termination
+
+        result = self.run_one(["--lineterminator=unix",
+                               "reformat",
+                               dospath,
+                               outpath])
+        self.assertEqual (result.exit_code, 0)
+        self.assertTrue (filecmp.cmp(outpath, inpath, shallow=False))
+
+        # Test reformatting from dos to dos line termination
+
+        result = self.run_one(["--lineterminator=dos",
+                               "reformat",
+                               dospath,
+                               outpath])
+        self.assertEqual (result.exit_code, 0)
+        self.assertTrue (filecmp.cmp(outpath, dospath, shallow=False))
+
+        # Test reformatting from dos to native line termination
+
+        result = self.run_one(["--lineterminator=native",
+                               "reformat",
+                               dospath,
+                               outpath])
+        self.assertEqual (result.exit_code, 0)
+
+        # Test output against the correct native line terminator
+        linesep = os.linesep
+        if linesep == "\n":
+            self.assertTrue (filecmp.cmp(outpath, inpath, shallow=False))
+        elif linesep == "\r\n":
+            self.assertTrue (filecmp.cmp(outpath, dospath, shallow=False))
+        else:
+            class UnknownPlatformError(Exception):
+                def __init__(self):
+                    pass
+            raise UnknownPlatformError
+
 if __name__ == "__main__":
     unittest.main()
 
