@@ -46,11 +46,11 @@ def validate(options, file, filename):
 
     return 0
 
-def reformat(options, infile):
+def reformat(options, infile, filename):
     key = options.key
 
     reader = csv.reader(infile)
-    if not __check_key(reader, infile.name, key):
+    if not __check_key(reader, filename, key):
         return 1
 
     writer = csv.writer(sys.stdout, **options.csv_kwargs())
@@ -59,7 +59,7 @@ def reformat(options, infile):
         for line, row in enumerate(reader, 1):
             writer.writerow(row)
     except:
-        eprint ("Error: file %s failed to parse at line %d" % (file.name, line))
+        eprint ("Error: file %s failed to parse at line %d" % (filename, line))
         return 1
 
     return 0

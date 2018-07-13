@@ -63,7 +63,7 @@ def reformat_cli(ctx, infile, outfile):
     # If we are working as a strict filter, don't redirect stdout at all
 
     if not (infile or outfile):
-        rc = tools.reformat(options, sys.stdin)
+        rc = tools.reformat(options, sys.stdin, "<stdin>")
         sys.exit(rc)
 
     # Otherwise, if we only have an input file specified, default is
@@ -73,7 +73,7 @@ def reformat_cli(ctx, infile, outfile):
         outfile = infile.name
 
     with output.safe_redirect_stdout([infile], outfile):
-        rc = tools.reformat(options, infile)
+        rc = tools.reformat(options, infile, infile.name)
     sys.exit(rc)
 
 # Provide this as a callable hook for setup.py consolescripts
