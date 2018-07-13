@@ -4,6 +4,8 @@ import unittest
 import click
 import sys
 import traceback
+import filecmp
+import shutil
 from click.testing import CliRunner
 
 import csvdiff3.tools
@@ -16,6 +18,8 @@ class TestOnCli(unittest.TestCase):
     """
     Runs a single test via the click CLI runner method.
     """
+    output_tmpfile = test_path("tmp.test.output")
+
     def run_one(self, args, **kwargs):
         runner = CliRunner()
         result = runner.invoke(csvdiff3.tools.csvhooks,
@@ -98,6 +102,90 @@ class TestValidateCli(TestOnCli):
         result = self.run_one(["--key=madeup", "validate"], input=path)
         self.assertEqual (result.exit_code, 1)
 
+class TestReformatIO(TestOnCli):
+    """
+    Test the reformat CLI: test the input/output functionality
+    (ability to work as a filter, safely overwrite existing files,
+    write to new files etc.)
+    """
+
+    def tearDown(self):
+        try:
+            os.unlink(self.output_tmpfile)
+        except FileNotFoundError:
+            pass
+
+    def test_reformat_io_new(self):
+        """
+        Test reformatting onto a new output file..
+        """
+        inpath = test_path("simple.csv")
+        outpath = self.output_tmpfile
+        quotepath = test_path("simple_quoted.csv")
+
+        # Make sure we start the test with the output file not present.
+
+        try:
+            os.unlink(outpath)
+        except FileNotFoundError:
+            pass
+
+        result = self.run_one(["--quote=minimal",
+                               "--lineterminator=unix",
+                               "reformat",
+                               inpath,
+                               outpath])
+        self.assertEqual (result.exit_code, 0)
+        self.assertTrue (filecmp.cmp(inpath, outpath, shallow=False))
+
+        # Try once more, overwriting the existing output file; it
+        # should have new contents
+
+        result = self.run_one(["--quote=all",
+                               "--lineterminator=unix",
+                               "reformat",
+                               inpath,
+                               outpath])
+        self.assertEqual (result.exit_code, 0)
+        self.assertTrue (filecmp.cmp(outpath, quotepath, shallow=False))
+
+    def test_reformat_io_overwrite(self):
+        """
+        Test reformatting on top of the input file.
+        """
+        inpath = test_path("simple.csv")
+        outpath = self.output_tmpfile
+        quotepath = test_path("simple_quoted.csv")
+
+        # Copy the unquoted input test file first
+
+        shutil.copyfile(inpath, outpath)
+
+        # and now try to reformat that file's contents in place
+
+        result = self.run_one(["--quote=all",
+                               "--lineterminator=unix",
+                               "reformat",
+                               outpath])
+        self.assertEqual (result.exit_code, 0)
+        self.assertTrue (filecmp.cmp(outpath, quotepath, shallow=False))
+
+    def test_reformat_io_filter(self):
+        """
+        Test reformatting as a simple pipe/filter.
+        """
+        inpath = test_path("simple.csv")
+        outpath = self.output_tmpfile
+        quotepath = test_path("simple_quoted.csv")
+
+        result = self.run_one_from_file(["--quote=all",
+                                         "--lineterminator=unix",
+                                         "reformat"],
+                                        inpath)
+        self.assertEqual (result.exit_code, 0)
+        with open(quotepath, "rt") as file:
+            test_output = file.read()
+            self.assertEqual (test_output, result.output)
 
 if __name__ == "__main__":
     unittest.main()
