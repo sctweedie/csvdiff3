@@ -556,7 +556,7 @@ class TestShortLines(MergeTest):
     """
 
     @unittest.skipIf(Debug.skip_tests, "skipping for debug")
-    def test_header_add(self):
+    def test_short_lines(self):
         """
         Test handling a line which is missing content but has no
         conflict on the other side.  Treat that as deleting a field.
@@ -586,6 +586,15 @@ class TestShortLines(MergeTest):
                              "testdata/simple_shortline.csv",
                              "testdata/simple_changed.csv",
                              "testdata/simple_shortline_conflict2.csv",
+                             "name")
+
+        # A is unchanged; B includes a completely blank short line
+        # which is missing the key entirely.
+
+        self.run_and_compare(self.file_unquoted,
+                             self.file_unquoted,
+                             "testdata/simple_emptyline.csv",
+                             "testdata/simple_emptyline.csv",
                              "name")
 
 class TestDupKeys(MergeTest):

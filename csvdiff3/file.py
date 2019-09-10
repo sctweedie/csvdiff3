@@ -29,6 +29,12 @@ class Line:
         assert isinstance(line, Line)
         return self.linenr - line.linenr
 
+    def get_field(self, index, default):
+        try:
+            return self.row[index]
+        except IndexError:
+            return default
+
 class FileReader:
     """
     File reader which also retains the original, unmodified contents of
@@ -119,7 +125,10 @@ class CSVFile:
 
         for count, line in enumerate(self.reader, 2):
             self.lines.append(line)
-            key = line.row[self.key_index]
+            # If there is a short line which does not include a field
+            # for the primary key column, it just gets assigned a
+            # blank key
+            key = line.get_field(self.key_index, '')
             if key in self.lines_by_key:
                 self.lines_by_key[key].append(line)
             else:
@@ -223,7 +232,9 @@ class Cursor:
         if self.EOF():
             return None
 
-        return self.getline(0).row[self.file.key_index]
+        # If there is a short line which does not include a field for
+        # the primary key column, it just gets assigned a blank key
+        return self.getline(0).get_field(self.file.key_index, '')
 
     def EOF(self):
         return self.linenr > self.file.last_line
@@ -252,7 +263,7 @@ class Cursor:
         match.
         """
 
-        assert key
+        assert key != None
 
         if key in self.backlog:
             return self.backlog[key]
