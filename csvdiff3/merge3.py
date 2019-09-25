@@ -82,7 +82,10 @@ class __State:
             return
 
         line = cursor[0]
-        key = line.row[cursor.file.key_index]
+        try:
+            key = line.row[cursor.file.key_index]
+        except IndexError:
+            key = ""
 
         logging.debug("  linenr %d, key %s, consumed %s" %
                       (line.linenr, key, line.is_consumed))
@@ -246,12 +249,12 @@ def merge3_next(state):
 
     # Maybe the line in the LCA has simply been deleted from A?
 
-    if key_LCA and not state.cursor_A.find_next_match(key_LCA):
+    if key_LCA != None and not state.cursor_A.find_next_match(key_LCA):
         return delete_one_A(state, key_LCA)
 
     # Or deleted from B?
 
-    if key_LCA and not state.cursor_B.find_next_match(key_LCA):
+    if key_LCA != None and not state.cursor_B.find_next_match(key_LCA):
         return delete_one_B(state, key_LCA)
 
     # So the key at LCA[0] is still present in both A and B; we're not

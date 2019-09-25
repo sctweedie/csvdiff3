@@ -597,6 +597,30 @@ class TestShortLines(MergeTest):
                              "testdata/simple_emptyline.csv",
                              "name")
 
+class TestMultiBlankLines(MergeTest):
+    """
+    Tests for handling multiple blank lines with overlapping
+    insert/delete (blank lines result in lines whose key is the empty
+    string; this is a special case but should still work.)
+    """
+
+    @unittest.skipIf(Debug.skip_tests, "skipping for debug")
+    def test_multi_blank_lines(self):
+        """
+        Test handling a blank line being deleted in A and duplicated in B
+        """
+
+        # LCA includes one blank line.  A removes that line; B adds a
+        # second copy.  The final output should include just the one
+        # added copy, minus the original one; ie. same as LCA.
+
+        self.run_and_compare("testdata/multi_blank_1.csv",
+                             "testdata/multi_blank_0.csv",
+                             "testdata/multi_blank_2.csv",
+                             "testdata/multi_blank_1.csv",
+                             "name")
+
+
 class TestDupKeys(MergeTest):
     """
     Tests for handling duplicated keys.  We should obey a simple rule:
