@@ -9,6 +9,8 @@
 #  content breakdown.
 
 import csv
+import logging
+import shutil
 from collections import OrderedDict
 
 class Line:
@@ -158,6 +160,16 @@ class CSVFile:
     def open(filename, key, **args):
         with open(filename, "rt") as file:
             return CSVFile(file, key, filename, **args)
+
+    def dump(self, id, prefix):
+        """Dump a CSVFile's contents to a safe dump location for later debugging."""
+
+        filename = prefix + "-" + id + ".dump"
+        stream = self.reader.reader.file.stream
+        logging.debug(f"Dumping file {id} to {filename}")
+        stream.seek(0)
+        with open(filename, "wt") as outfile:
+            shutil.copyfileobj(stream, outfile)
 
 class Cursor:
     """

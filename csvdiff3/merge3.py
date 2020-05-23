@@ -1,8 +1,11 @@
 #!/usr/bin/python3
 
 import sys
+import os
 import logging
 import re
+import random
+import string
 
 from colorama import Fore, Style
 
@@ -101,6 +104,24 @@ class __State:
         self.dump_one_cursor("LCA", self.cursor_LCA)
         self.dump_one_cursor("A", self.cursor_A)
         self.dump_one_cursor("B", self.cursor_B)
+
+        # If the user has a dump directory already created for
+        # debugging, also dump the LCA/A/B file contents there.
+
+        path = os.path.expanduser("~/.csvmerge3.dump/")
+        if not os.path.exists(path):
+            return
+
+        prefix = ''.join(random.choices(string.ascii_uppercase
+                                        + string.ascii_lowercase
+                                        + string.digits, k=6))
+        prefix = os.path.join(path, "csvmerge3-"+prefix)
+
+        self.file_LCA.dump("LCA", prefix)
+        self.file_A.dump("A", prefix)
+        self.file_B.dump("B", prefix)
+
+        print(f"csvmerge3: Files dumped to {prefix}-*.dump", file=sys.stderr)
 
 class Conflict:
     """
