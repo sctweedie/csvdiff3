@@ -568,9 +568,10 @@ def merge_one_all_different(state, key_LCA, key_A, key_B):
     # exists in LCA or B yet, or key_B in LCA / A.
 
     # Because key_LCA is in both A and B, neither A nor B can be empty
+    # (although the keys themselves may be empty strings)
 
-    assert key_A
-    assert key_B
+    assert key_A != None
+    assert key_B != None
 
     # Keys A and B both exist.  How do we decide which is better to
     # emit?
@@ -578,7 +579,7 @@ def merge_one_all_different(state, key_LCA, key_A, key_B):
     # We will use the relevance algorithm described in notes.txt.
     # Find how close key_A's match is in B, and vice-versa; then
     # attempt to keep the closest match in the queue, to resync as
-    # soon as possible.  (Ie. we emit the key that as the most
+    # soon as possible.  (Ie. we emit the key that has the most
     # distant, least relevant match.)
 
     A_relevance_in_B = resync_relevance(key_A, state.cursor_B)
