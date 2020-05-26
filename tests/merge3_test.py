@@ -674,6 +674,39 @@ class TestReformatAll(MergeTest):
                              quote = "all",
                              reformat_all = True)
 
+class TestBlankAllDiff(MergeTest):
+    """
+    Tests for 3-way conflict including blank keys
+    """
+
+    def test_blank_alldiff(self):
+        """
+        Test handling the state where
+        * the next lines in each file (LCA, A, B) all have different keys
+        * it's not a delete (the expected next LCA line still exists in each side)
+        * one of the lines has a blank key
+        as this was causing an assert failure
+        """
+
+        self.run_and_compare("testdata/blank_alldiff_LCA.csv",
+                             "testdata/blank_alldiff_A.csv",
+                             "testdata/blank_alldiff_B.csv",
+                             "testdata/blank_alldiff_out.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
+
+        # We should get the same result with A and B swapped
+        self.run_and_compare("testdata/blank_alldiff_LCA.csv",
+                             "testdata/blank_alldiff_B.csv",
+                             "testdata/blank_alldiff_A.csv",
+                             "testdata/blank_alldiff_out.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
+
+
+
 
 if __name__ == "__main__":
     unittest.main()
