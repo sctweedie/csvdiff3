@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from . import merge3, file, headers, tools
+from . import merge3, file, headers, tools, output
 
 import click
 import sys

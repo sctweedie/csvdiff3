@@ -12,6 +12,7 @@ from colorama import Fore, Style
 from .file import *
 from .headers import Headers
 from .tools.options import Options
+from .output import Merge3OutputDriver
 
 class ConflictError(Exception):
     pass
@@ -21,7 +22,7 @@ class UnhandledError(Exception):
 
 class __State:
     def __init__(self, file_LCA, file_A, file_B,
-                 headers, stream, writer,
+                 headers, output_driver,
                  colour = False,
                  reformat_all = False):
 
@@ -30,8 +31,7 @@ class __State:
         self.file_B = file_B
 
         self.headers = headers
-        self.stream = stream
-        self.writer = writer
+        self.output_driver = output_driver
 
         self.cursor_LCA = Cursor(file_LCA)
         self.cursor_A = Cursor(file_A)
@@ -154,73 +154,6 @@ class Conflicts:
     def add(self, conflict):
         self.conflicts.append(conflict)
 
-    @staticmethod
-    def line_to_str(line, cursor_LCA, cursor_line):
-        if not line:
-            return "Deleted @%d" % cursor_LCA.linenr
-        return "@%d (%s)" % (line.linenr, line.row[cursor_line.file.key_index])
-
-    newline_regexp = re.compile("\n|\r\n")
-
-    @staticmethod
-    def quote_newlines(text, replacement = "\\\\n"):
-        """
-        Prepare a key for printing, replacing any EOL/newline
-        sequences with "\n" to keep the output on a single line.
-        """
-        return Conflicts.newline_regexp.sub(replacement, format(text))
-
-    def write(self, state):
-        """
-        Write a set of conflicts for a single line to the output.
-        """
-
-        # Side A first
-
-        linestr = ">>>>>> %s %s\n" % \
-            (state.cursor_A.file.filename,
-             self.line_to_str(self.line_A, state.cursor_LCA, state.cursor_A))
-        state.stream.write(linestr)
-
-        for c in self:
-            linestr = ">>>>>> %s = %s%s%s\n" % \
-                (c.column.name,
-                 state.text_red(),
-                 self.quote_newlines(c.val_A),
-                 state.text_reset()
-                )
-            state.stream.write(linestr)
-
-        if self.line_A:
-            state.stream.write(state.text_red())
-            state.stream.write(self.line_A.text)
-            state.stream.write(state.text_reset())
-
-        # Side B next
-
-        linestr = "====== %s %s\n" % \
-            (state.cursor_B.file.filename,
-             self.line_to_str(self.line_B, state.cursor_LCA, state.cursor_B))
-        state.stream.write(linestr)
-
-        for c in self:
-            linestr = "====== %s = %s%s%s\n" % \
-                (c.column.name,
-                 state.text_green(),
-                 self.quote_newlines(c.val_B),
-                 state.text_reset()
-                )
-            state.stream.write(linestr)
-
-        if self.line_B:
-            state.stream.write(state.text_green())
-            state.stream.write(self.line_B.text)
-            state.stream.write(state.text_reset())
-
-        state.stream.write(state.text_reset())
-        linestr = "<<<<<<\n"
-
-        state.stream.write(linestr)
 
 
 def merge3_next(state):
@@ -739,7 +672,7 @@ def merge_one_line(state, line_LCA, line_A, line_B):
             out_text = (line_A or line_B).text
             # Log the output without line-terminator
             logging.debug("  Writing exact text: %s" % out_text[0:-1])
-            state.stream.write(out_text)
+            state.output_driver.emit_text(out_text)
             return
 
     # do field-by-field merging
@@ -767,7 +700,7 @@ def merge_one_line(state, line_LCA, line_A, line_B):
 
     if conflicts:
         logging.debug("  Writing conflicts: %s" % row)
-        conflicts.write(state)
+        state.output_driver.emit_conflicts(state, conflicts)
         state.file_has_conflicts = True
 
     else:
@@ -783,7 +716,7 @@ def merge_one_line(state, line_LCA, line_A, line_B):
             return
 
         logging.debug("  Writing row: %s" % row)
-        state.writer.writerow(row)
+        state.output_driver.emit_csv_row(state, row)
 
 def merge3(file_lca, file_a, file_b, key,
            output = sys.stdout,
@@ -834,7 +767,12 @@ def merge3(file_lca, file_a, file_b, key,
 
     dialect_args = options.csv_kwargs()
 
-    writer = csv.writer(output, **dialect_args)
+    # Initialise the merging state
+
+    output_driver = Merge3OutputDriver(output, dialect_args)
+    state = __State(file_LCA, file_A, file_B, headers, output_driver,
+                    colour = colour,
+                    reformat_all = reformat_all)
 
     # If all three input files have the exact same header text, then
     # output the header as that text verbatim;
@@ -843,15 +781,9 @@ def merge3(file_lca, file_a, file_b, key,
 
     if (not reformat_all) and \
        file_LCA.header.text == file_A.header.text == file_B.header.text:
-        output.write(file_A.header.text)
+        output_driver.emit_text(file_A.header.text)
     else:
-        writer.writerow(headers.headers)
-
-    # Initialise the merging state
-
-    state = __State(file_LCA, file_A, file_B, headers, output, writer,
-                    colour = colour,
-                    reformat_all = reformat_all)
+        output_driver.emit_csv_row(None, headers.headers)
 
     try:
         while not state.EOF():
