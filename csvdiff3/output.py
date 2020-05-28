@@ -47,6 +47,10 @@ class Merge3OutputDriver(OutputDriver):
         self.writer = csv.writer(self.stream, **self.dialect_args)
 
     def emit_text(self, state, line_LCA, line_A, line_B, text):
+        # Do nothing if there is no text in the merged output
+        # (ie. this line has been deleted.)
+        if not text:
+            return
         self.stream.write(text)
 
     def emit_csv_row(self, state, line_LCA, line_A, line_B, row):

@@ -663,6 +663,11 @@ def merge_one_line(state, line_LCA, line_A, line_B):
 
         if is_delete:
             logging.debug("  Skipping deleted row: %s" % line_LCA.row)
+            # We will still send an empty line to the output driver so
+            # that diff2/3 outputs can record the deleted line.
+            state.output_driver.emit_text(state,
+                                          line_LCA, line_A, line_B,
+                                          None)
             return
 
         # Don't output un-reformatted existing text if we are forcing
