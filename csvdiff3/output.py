@@ -18,14 +18,45 @@ class OutputDriver():
 
     @abstractmethod
     def emit_text(self, state, line_LCA, line_A, line_B, text):
+        """
+        Emit a line of merged text.
+
+        The text will reflect the final result of merge; if a line in
+        LCA has been deleted entirely, the text will have the value
+        None.
+
+        The line_LCA, line_A and line_B will all represent lines being
+        merged for this row.  They may be absent: for a newly-added
+        line, line_LCA will be None; and for deleted lines, line_A or
+        line_B (or both) will be None.  But any lines presented will
+        have the same key and will have been merged by the time this
+        method is called.
+        """
         pass
 
     @abstractmethod
     def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
+        """
+        Emit a row of merged CSV.
+
+        We emit merges as CSV rows, rather than text, either:
+
+        * when reformat_all is set (in which case we want to re-write
+          the CSV entirely to refresh field quoting, or
+
+        * when a 3-way merge has been required, so that we cannot use
+          either the A or B original text verbatim.
+        """
         pass
 
     @abstractmethod
     def emit_conflicts(self, state, line_LCA, line_A, line_B, conflicts):
+        """
+        Emit a row with conflicts.
+
+        The conflicts object will include a list of those fields which
+        could not be automatically merged, ie. which had conflicting
+        updates in A and B."""
         pass
 
     # Some common helper functions to assist output drivers with formatting
@@ -54,6 +85,10 @@ class Merge3OutputDriver(OutputDriver):
         self.stream.write(text)
 
     def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
+        # Do nothing if there is no content in the merged output
+        # (ie. this line has been deleted.)
+        if not row:
+            return
         self.writer.writerow(row)
         pass
 
