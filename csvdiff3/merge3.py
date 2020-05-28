@@ -672,7 +672,9 @@ def merge_one_line(state, line_LCA, line_A, line_B):
             out_text = (line_A or line_B).text
             # Log the output without line-terminator
             logging.debug("  Writing exact text: %s" % out_text[0:-1])
-            state.output_driver.emit_text(out_text)
+            state.output_driver.emit_text(state,
+                                          line_LCA, line_A, line_B,
+                                          out_text)
             return
 
     # do field-by-field merging
@@ -700,7 +702,9 @@ def merge_one_line(state, line_LCA, line_A, line_B):
 
     if conflicts:
         logging.debug("  Writing conflicts: %s" % row)
-        state.output_driver.emit_conflicts(state, conflicts)
+        state.output_driver.emit_conflicts(state,
+                                           line_LCA, line_A, line_B,
+                                           conflicts)
         state.file_has_conflicts = True
 
     else:
@@ -716,7 +720,9 @@ def merge_one_line(state, line_LCA, line_A, line_B):
             return
 
         logging.debug("  Writing row: %s" % row)
-        state.output_driver.emit_csv_row(state, row)
+        state.output_driver.emit_csv_row(state,
+                                         line_LCA, line_A, line_B,
+                                         row)
 
 def merge3(file_lca, file_a, file_b, key,
            output = sys.stdout,
@@ -781,9 +787,13 @@ def merge3(file_lca, file_a, file_b, key,
 
     if (not reformat_all) and \
        file_LCA.header.text == file_A.header.text == file_B.header.text:
-        output_driver.emit_text(file_A.header.text)
+        output_driver.emit_text(state,
+                                file_LCA[1], file_A[1], file_B[1],
+                                file_A.header.text)
     else:
-        output_driver.emit_csv_row(None, headers.headers)
+        output_driver.emit_csv_row(state,
+                                   file_LCA[1], file_A[1], file_B[1],
+                                   headers.headers)
 
     try:
         while not state.EOF():

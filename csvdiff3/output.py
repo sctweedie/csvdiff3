@@ -17,23 +17,15 @@ class OutputDriver():
         self.dialect_args = dialect_args
 
     @abstractmethod
-    def emit_text(self, state, line):
+    def emit_text(self, state, line_LCA, line_A, line_B, text):
         pass
 
     @abstractmethod
-    def emit_shared_line(self, state, line):
+    def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
         pass
 
     @abstractmethod
-    def emit_merged_line(self, state, line):
-        pass
-
-    @abstractmethod
-    def emit_csv_row(self, state, row):
-        pass
-
-    @abstractmethod
-    def emit_conflicts(self, state, conflicts):
+    def emit_conflicts(self, state, line_LCA, line_A, line_B, conflicts):
         pass
 
     # Some common helper functions to assist output drivers with formatting
@@ -54,20 +46,14 @@ class Merge3OutputDriver(OutputDriver):
         OutputDriver.__init__(self, *args, **kwargs)
         self.writer = csv.writer(self.stream, **self.dialect_args)
 
-    def emit_text(self, text):
+    def emit_text(self, state, line_LCA, line_A, line_B, text):
         self.stream.write(text)
 
-    def emit_shared_line(self, state, line):
-        self.stream.write(text)
-
-    def emit_merged_line(self, state, line):
-        pass
-
-    def emit_csv_row(self, state, row):
+    def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
         self.writer.writerow(row)
         pass
 
-    def emit_conflicts(self, state, conflicts):
+    def emit_conflicts(self, state, line_LCA, line_A, line_B, conflicts):
         """
         Write a set of conflicts for a single line to the output.
         """
@@ -126,3 +112,19 @@ class Merge3OutputDriver(OutputDriver):
         return "@%d (%s)" % (line.linenr, line.row[cursor_line.file.key_index])
 
 
+
+class Diff2OutputDriver(OutputDriver):
+    def __init__(self, *args, **kwargs):
+        OutputDriver.__init__(self, *args, **kwargs)
+        self.writer = csv.writer(self.stream, **self.dialect_args)
+
+    def emit_text(self, state, line_LCA, line_A, line_B, text):
+        self.stream.write(text)
+
+    def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
+        self.writer.writerow(row)
+        pass
+
+    def emit_conflicts(self, state, line_LCA, line_A, line_B, conflicts):
+        # A 2-way diff should never be able to produce conflicts!
+        assert False
