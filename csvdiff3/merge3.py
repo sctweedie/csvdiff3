@@ -80,22 +80,28 @@ class __State:
         logging.debug("cursor %s at linenr %d:" %
                       (name, cursor.linenr))
 
+        # Dump the current line (unless EOF)
         if cursor.EOF():
             logging.debug("  EOF")
-            return
 
-        line = cursor[0]
-        try:
-            key = line.row[cursor.file.key_index]
-        except IndexError:
-            key = ""
+        else:
 
-        logging.debug("  linenr %d, key %s, consumed %s" %
-                      (line.linenr, key, line.is_consumed))
-        if key in cursor.backlog:
-            for b in cursor.backlog[key]:
-                if b is line:
-                    logging.debug("  line found in backlog")
+            line = cursor[0]
+            try:
+                key = line.row[cursor.file.key_index]
+            except IndexError:
+                key = ""
+
+            logging.debug("  linenr %d, key %s, consumed %s" %
+                          (line.linenr, key, line.is_consumed))
+
+        # And dump the backlog
+        logging.debug(f"  backlog: {len(cursor.backlog)}")
+        for key in cursor.backlog:
+            logging.debug(f"  backlog key {key}")
+            for line in cursor.backlog.getlist(key):
+                logging.debug(f"  backlog linenr {line.linenr}, text '{line.text}'" +
+                              f"is {'not ' if not line.is_consumed else ''} consumed")
 
     def dump_current_state(self):
         """

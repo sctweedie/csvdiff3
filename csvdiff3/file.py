@@ -11,7 +11,7 @@
 import csv
 import logging
 import shutil
-from collections import OrderedDict
+from orderedmultidict import omdict
 
 class Line:
     """
@@ -189,7 +189,7 @@ class Cursor:
 
         # Maintain a backlog of Lines that we know we will need later
         # on from some file
-        self.backlog = OrderedDict()
+        self.backlog = omdict()
 
     def __getitem__(self, offset):
         """
@@ -262,8 +262,11 @@ class Cursor:
         Automatically advances to the next line position.
         """
         key = self.current_key()
-        assert not key in self.backlog
-        self.backlog[key] = self.getline(0)
+        # We need to be able to handle multiple instances of the same
+        # key in the backlog, for the special case where multiple
+        # lines with the same key exist, and all of those lines are
+        # being reordered in the output
+        self.backlog.add(key, self.getline(0))
         self.advance()
 
     def find_next_match(self, key):
@@ -311,7 +314,7 @@ class Cursor:
 
         if key in self.backlog:
             assert self.backlog[key] == line
-            del self.backlog[key]
+            self.backlog.popvalue(key, last=False)
             return
 
         # It's not in the backlog so it must be either the current
