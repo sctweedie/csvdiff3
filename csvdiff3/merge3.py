@@ -312,6 +312,11 @@ def resync_LCA(state, key_LCA, key_A, key_B):
 
     if LCA_relevance == None:
         logging.debug("  Action: advance LCA (skipping %s)" % key_LCA)
+        # Also pass the deleted line to the output driver, with empty
+        # A and B lines and no text.
+        state.output_driver.emit_text(state,
+                                      state.cursor_LCA[0], None, None,
+                                      None)
         state.cursor_LCA.advance()
         return True
 
