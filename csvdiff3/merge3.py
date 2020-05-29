@@ -856,13 +856,14 @@ def merge3(file_lca, file_a, file_b, key,
     try:
         while not state.EOF():
             merge3_next(state)
+
+        state.cursor_LCA.assert_finished()
+        state.cursor_A.assert_finished()
+        state.cursor_B.assert_finished()
+
     except AssertionError:
         state.dump_current_state()
         raise
-
-    state.cursor_LCA.assert_finished()
-    state.cursor_A.assert_finished()
-    state.cursor_B.assert_finished()
 
     if state.file_has_conflicts:
         return 1
