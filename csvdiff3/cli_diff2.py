@@ -27,8 +27,8 @@ from .output import Diff2OutputDriver
               help = "Enable logging in DEBUG.log")
 
 def cli_diff2(file1, file2,
-               colour, key,
-               debug):
+              colour, key,
+              debug):
 
     colorama.init()
 
