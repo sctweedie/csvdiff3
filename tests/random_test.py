@@ -256,8 +256,11 @@ file_B = TweakedRandomFile(file_common.clone())
 # with debug disabled; we can rerun the merge from the dump files with
 # full debug logging enabled if an error occurs.
 
+reformat = (random.randint(1,2) == 1)
+
 csvdiff3.merge3.merge3(file_LCA,
                        file_A,
                        file_B,
                        "name",
-                       debug = False)
+                       debug = False,
+                       reformat_all = reformat)
