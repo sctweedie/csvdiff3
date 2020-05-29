@@ -40,12 +40,11 @@ def cli_diff2(file1, file2,
         # both A and B.
         with open(file2, "rt") as file_A:
             with open(file2, "rt") as file_B:
-
-                  rc = merge3(file_LCA, file_A, file_B, key,
-                              debug = debug,
-                              colour = colour,
-                              reformat_all = True,
-                              output_driver_class = Diff2OutputDriver)
+                rc = merge3(file_LCA, file_A, file_B, key,
+                            debug = debug,
+                            colour = colour,
+                            reformat_all = True,
+                            output_driver_class = Diff2OutputDriver)
 
     sys.exit(rc)
 
