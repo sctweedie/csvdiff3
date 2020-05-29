@@ -735,7 +735,8 @@ def merge3(file_lca, file_a, file_b, key,
            colour = False,
            quote = "minimal",
            lineterminator = "unix",
-           reformat_all = False):
+           reformat_all = False,
+           output_driver_class = Merge3OutputDriver):
     """
     Perform a full 3-way merge on 3 given CSV files, using the given
     column name as a primary key.
@@ -780,7 +781,7 @@ def merge3(file_lca, file_a, file_b, key,
 
     # Initialise the merging state
 
-    output_driver = Merge3OutputDriver(output, dialect_args)
+    output_driver = output_driver_class(output, dialect_args)
     state = __State(file_LCA, file_A, file_B, headers, output_driver,
                     colour = colour,
                     reformat_all = reformat_all)

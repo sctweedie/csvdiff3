@@ -16,7 +16,8 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     entry_points={
         'console_scripts': [
-            'csvmerge3 = csvdiff3:merge3_cli',
+            'csvmerge3 = csvdiff3.cli_merge3:cli_merge3',
+            'csvdiff = csvdiff3.cli_diff2:cli_diff2',
             'csvhooks = csvdiff3.tools:csvhooks_cli'
         ],
     },
