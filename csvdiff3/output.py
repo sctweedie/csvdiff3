@@ -157,10 +157,36 @@ class Diff2OutputDriver(OutputDriver):
         OutputDriver.__init__(self, *args, **kwargs)
         self.writer = csv.writer(self.stream, **self.dialect_args)
 
+    def emit_line_numbers(self, line_LCA, line_A):
+        """
+        Write diff-specific line number information, indicating if a line
+        has been added, removed or reordered
+        """
+        if not line_LCA:
+            # Line has been added
+            self.stream.write(f"@@ +{line_A.linenr} @@\n")
+        elif not line_A:
+            # Line has been deleted
+            self.stream.write(f"@@ -{line_LCA.linenr} @@\n")
+        else:
+            self.stream.write(f"@@ -{line_LCA.linenr} +{line_A.linenr} @@\n")
+
     def emit_text(self, state, line_LCA, line_A, line_B, text):
-        self.stream.write(text)
+        old_text = getattr(line_LCA, "text", None)
+
+        if old_text == text:
+            return
+        self.emit_line_numbers(line_LCA, line_A)
+
+        # For deleted lines, we need to write the old text, not the
+        # new
+        if not line_A:
+            self.stream.write(line_LCA.text)
+        else:
+            self.stream.write(text)
 
     def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
+        self.emit_line_numbers(line_LCA, line_A)
         self.writer.writerow(row)
         pass
 
