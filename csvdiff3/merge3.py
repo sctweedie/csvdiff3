@@ -72,6 +72,12 @@ class __State:
     def text_green(self):
         return self.text_if_colour_enabled(Fore.GREEN)
 
+    def text_cyan(self):
+        return self.text_if_colour_enabled(Fore.CYAN)
+
+    def text_bold(self):
+        return self.text_if_colour_enabled(Style.BRIGHT)
+
     def text_reset(self):
         return self.text_if_colour_enabled(Style.RESET_ALL)
 

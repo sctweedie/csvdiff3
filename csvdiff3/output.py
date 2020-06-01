@@ -157,19 +157,24 @@ class Diff2OutputDriver(OutputDriver):
         OutputDriver.__init__(self, *args, **kwargs)
         self.writer = csv.writer(self.stream, **self.dialect_args)
 
-    def emit_line_numbers(self, line_LCA, line_A):
+    def emit_line_numbers(self, state, line_LCA, line_A, key):
         """
         Write diff-specific line number information, indicating if a line
         has been added, removed or reordered
         """
+        key_text = state.text_bold() + key + state.text_reset()
+
         if not line_LCA:
             # Line has been added
-            self.stream.write(f"@@ +{line_A.linenr} @@\n")
+            self.stream.write(f"{state.text_cyan()}@@ +{line_A.linenr} @@" +
+                              f"{state.text_reset()} {key_text}\n")
         elif not line_A:
             # Line has been deleted
-            self.stream.write(f"@@ -{line_LCA.linenr} @@\n")
+            self.stream.write(f"{state.text_cyan()}@@ -{line_LCA.linenr} @@" +
+                              f"{state.text_reset()} {key_text}\n")
         else:
-            self.stream.write(f"@@ -{line_LCA.linenr} +{line_A.linenr} @@\n")
+            self.stream.write(f"{state.text_cyan()}@@ -{line_LCA.linenr} " +
+                              f"+{line_A.linenr} @@{state.text_reset()} {key_text}\n")
 
     def emit_text(self, state, line_LCA, line_A, line_B, text):
         # We emit text, rather than rows, when there is no merging to
@@ -189,17 +194,19 @@ class Diff2OutputDriver(OutputDriver):
             # so it's an unmodified line: just ignore it.
             return
 
-        self.emit_line_numbers(line_LCA, line_A)
-
         # For deleted lines, we need to write the old text, not the
         # new.
         if not line_A:
             text = line_LCA.text
             colour = state.text_red()
             prefix = "-"
+            key = state.cursor_LCA.current_key()
         else:
             colour = state.text_green()
             prefix = "+"
+            key = state.cursor_A.current_key()
+
+        self.emit_line_numbers(state, line_LCA, line_A, key)
 
         # We want to quote newlines embedded within the CSV fields,
         # but the full-line text will also have a trailing newline
@@ -210,7 +217,9 @@ class Diff2OutputDriver(OutputDriver):
         self.stream.write(prefix + colour + text + state.text_reset() + "\n")
 
     def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
-        self.emit_line_numbers(line_LCA, line_A)
+
+        key = state.cursor_A.current_key()
+        self.emit_line_numbers(state, line_LCA, line_A, key)
 
         fields = []
         for field in state.headers.header_map:
