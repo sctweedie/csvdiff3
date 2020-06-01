@@ -43,7 +43,7 @@ def cli_diff2(file1, file2,
                 rc = merge3(file_LCA, file_A, file_B, key,
                             debug = debug,
                             colour = colour,
-                            reformat_all = True,
+                            reformat_all = False,
                             output_driver_class = Diff2OutputDriver)
 
     sys.exit(rc)
