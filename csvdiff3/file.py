@@ -109,6 +109,7 @@ class CSVFile:
         self.reader = CSVHeaderFile(stream, **args)
 
         self.header = self.reader.header
+        self.key = key
         self.lines = [self.header]
         self.lines_by_key = {}
         self.filename = filename

@@ -1,6 +1,8 @@
 from abc import abstractmethod
 import re
 import csv
+import sys
+import os
 
 class OutputDriver():
     """
@@ -15,6 +17,9 @@ class OutputDriver():
     def __init__(self, stream, dialect_args):
         self.stream = stream
         self.dialect_args = dialect_args
+
+    def emit_preamble(self, state, options, file_LCA, file_A, file_B, file_common_name):
+        pass
 
     @abstractmethod
     def emit_text(self, state, line_LCA, line_A, line_B, text):
@@ -155,7 +160,28 @@ class Merge3OutputDriver(OutputDriver):
 class Diff2OutputDriver(OutputDriver):
     def __init__(self, *args, **kwargs):
         OutputDriver.__init__(self, *args, **kwargs)
-        self.writer = csv.writer(self.stream, **self.dialect_args)
+
+    def emit_preamble(self, state, options, file_LCA, file_A, file_B, file_common_name):
+        # For 2-way diff we start the output with a standard
+        # diff-style header
+
+        name = os.path.basename(sys.argv[0])
+        file1 = file_LCA.reader.reader.file.stream.name
+        file2 = file_A.reader.reader.file.stream.name
+
+        if file_common_name:
+            file1 = "a/" + file_common_name
+            file2 = "b/" + file_common_name
+
+        key = file_LCA.key
+        self.stream.write(state.text_bold() +
+                          f"{name} -k\"{key}\" " +
+                          f"{file1} {file2}\n" +
+                          state.text_bold() +
+                          f"--- {file1}\n" +
+                          state.text_bold() +
+                          f"+++ {file2}\n" +
+                          state.text_reset())
 
     def emit_line_numbers(self, state, line_LCA, line_A, key):
         """

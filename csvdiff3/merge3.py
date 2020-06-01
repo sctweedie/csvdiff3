@@ -747,6 +747,7 @@ def merge3(file_lca, file_a, file_b, key,
            quote = "minimal",
            lineterminator = "unix",
            reformat_all = False,
+           file_common_name = None,
            output_driver_class = Merge3OutputDriver):
     """
     Perform a full 3-way merge on 3 given CSV files, using the given
@@ -796,6 +797,10 @@ def merge3(file_lca, file_a, file_b, key,
     state = __State(file_LCA, file_A, file_B, headers, output_driver,
                     colour = colour,
                     reformat_all = reformat_all)
+
+    output_driver.emit_preamble(state, options,
+                                file_LCA, file_A, file_B,
+                                file_common_name)
 
     # If all three input files have the exact same header text, then
     # output the header as that text verbatim;

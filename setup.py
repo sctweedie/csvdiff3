@@ -18,6 +18,7 @@ setuptools.setup(
         'console_scripts': [
             'csvmerge3 = csvdiff3.cli_merge3:cli_merge3',
             'csvdiff = csvdiff3.cli_diff2:cli_diff2',
+            'csvdiff_git = csvdiff3.cli_diff2:cli_diff2_git',
             'csvhooks = csvdiff3.tools:csvhooks_cli'
         ],
     },
