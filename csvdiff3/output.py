@@ -172,23 +172,61 @@ class Diff2OutputDriver(OutputDriver):
             self.stream.write(f"@@ -{line_LCA.linenr} +{line_A.linenr} @@\n")
 
     def emit_text(self, state, line_LCA, line_A, line_B, text):
-        old_text = getattr(line_LCA, "text", None)
+        # We emit text, rather than rows, when there is no merging to
+        # be done within the line itself.
+        #
+        # That happens in three cases:
+        # 1. The line has been deleted, so there's nothing in A/B to compare against
+        # 2. The line has been added, so there's nothing in LCA to compare against
+        # 3. The line is unmodified
+        #
+        # We'll just ignore unmodified lines here.  (We *could* try to
+        # track reordered lines but choose to ignore that at this
+        # point.)
 
-        if old_text == text:
+        if line_LCA and line_A:
+            # If we have both lines present, it's not an add/delete,
+            # so it's an unmodified line: just ignore it.
             return
+
         self.emit_line_numbers(line_LCA, line_A)
 
         # For deleted lines, we need to write the old text, not the
-        # new
+        # new.
         if not line_A:
-            self.stream.write(line_LCA.text)
+            text = line_LCA.text
+            colour = state.text_red()
+            prefix = "-"
         else:
-            self.stream.write(text)
+            colour = state.text_green()
+            prefix = "+"
+
+        # We want to quote newlines embedded within the CSV fields,
+        # but the full-line text will also have a trailing newline
+        # that we need to remove first.
+
+        text = self.quote_newlines(text.strip("\n"))
+
+        self.stream.write(prefix + colour + text + state.text_reset() + "\n")
 
     def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
         self.emit_line_numbers(line_LCA, line_A)
-        self.writer.writerow(row)
-        pass
+
+        fields = []
+        for field in state.headers.header_map:
+            val_LCA = line_LCA.get_field(field.LCA_column, "")
+            val_A = line_A.get_field(field.A_column, "")
+
+            if val_LCA == val_A:
+                fields.append(self.quote_newlines(val_A))
+            else:
+                fields.append("{" + state.text_red() +
+                              f"-{self.quote_newlines(val_LCA)}-" +
+                              state.text_reset() + "," +
+                              state.text_green() +
+                              f"+{self.quote_newlines(val_A)}+" +
+                              state.text_reset() + "}")
+        self.stream.write(" " + ",".join(fields) + "\n")
 
     def emit_conflicts(self, state, line_LCA, line_A, line_B, conflicts):
         # A 2-way diff should never be able to produce conflicts!
