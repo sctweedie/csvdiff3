@@ -12,6 +12,38 @@ import csv
 import logging
 import shutil
 from orderedmultidict import omdict
+from collections import UserString
+
+# Define a custom string type that always evaluates to True when cast
+# to boolean.
+#
+# The core merge logic depends on matching lines with similar keys, so
+# key values are a core part of the algorithm.  And it is critical to
+# know when a key is present in other files; we use a value of None in
+# various places as a key to indicate that a particular key is absent
+# in one of the merging files.
+#
+# But the empty string "" is also a legal key --- it arises whenever
+# we have a blank line in an input file, for example.  We treat such
+# lines as entirely legal, normal lines: a blank line ("" key) in one
+# file should simply match the next blank line in other files.
+#
+# We will be testing whether lines exist by checking if the relevant
+# Key evaluates to True or False, eg. with
+#
+#   if Key_LCA:
+#       ...key is present in the current LCA line...
+#
+# and we want this to evaluate to True even for the empty string.
+#
+# So provide an override class for such Keys which always evaluate to
+# True in such situations; False will only be returned if the Key is
+# None, ie. it is genuinely missing and we have no matching line in
+# the given file.
+
+class Key(UserString):
+    def __bool__(self):
+        return True
 
 class Line:
     """
@@ -31,11 +63,11 @@ class Line:
         assert isinstance(line, Line)
         return self.linenr - line.linenr
 
-    def get_field(self, index, default):
+    def get_field(self, index):
         try:
-            return self.row[index]
+            return Key(self.row[index])
         except IndexError:
-            return default
+            return Key('')
 
 class FileReader:
     """
@@ -130,7 +162,7 @@ class CSVFile:
             # If there is a short line which does not include a field
             # for the primary key column, it just gets assigned a
             # blank key
-            key = line.get_field(self.key_index, '')
+            key = line.get_field(self.key_index)
             if key in self.lines_by_key:
                 self.lines_by_key[key].append(line)
             else:
@@ -246,7 +278,7 @@ class Cursor:
 
         # If there is a short line which does not include a field for
         # the primary key column, it just gets assigned a blank key
-        return self.getline(0).get_field(self.file.key_index, '')
+        return self.getline(0).get_field(self.file.key_index)
 
     def EOF(self):
         return self.linenr > self.file.last_line

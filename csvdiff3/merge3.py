@@ -276,12 +276,12 @@ def merge3_next(state):
 
     # Maybe the line in the LCA has simply been deleted from A?
 
-    if key_LCA != None and not state.cursor_A.find_next_match(key_LCA):
+    if key_LCA and not state.cursor_A.find_next_match(key_LCA):
         return delete_one_A(state, key_LCA)
 
     # Or deleted from B?
 
-    if key_LCA != None and not state.cursor_B.find_next_match(key_LCA):
+    if key_LCA and not state.cursor_B.find_next_match(key_LCA):
         return delete_one_B(state, key_LCA)
 
     # So the key at LCA[0] is still present in both A and B; we're not
@@ -576,8 +576,8 @@ def merge_one_all_different(state, key_LCA, key_A, key_B):
     # Because key_LCA is in both A and B, neither A nor B can be empty
     # (although the keys themselves may be empty strings)
 
-    assert key_A != None
-    assert key_B != None
+    assert key_A
+    assert key_B
 
     # Keys A and B both exist.  How do we decide which is better to
     # emit?
@@ -713,9 +713,9 @@ def merge_one_line(state, line_LCA, line_A, line_B):
     # Check that we have the right key on all three lines.  We
     # *really* do not want to merge the wrong lines by mistake!
 
-    key_LCA = line_LCA and line_LCA.get_field(state.cursor_LCA.file.key_index, '')
-    key_A = line_A and line_A.get_field(state.cursor_A.file.key_index, '')
-    key_B = line_B and line_B.get_field(state.cursor_B.file.key_index, '')
+    key_LCA = line_LCA and line_LCA.get_field(state.cursor_LCA.file.key_index)
+    key_A = line_A and line_A.get_field(state.cursor_A.file.key_index)
+    key_B = line_B and line_B.get_field(state.cursor_B.file.key_index)
 
     key = key_LCA or key_A or key_B
 
