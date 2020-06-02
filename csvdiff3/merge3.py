@@ -100,8 +100,8 @@ class __State:
         for key in cursor.backlog:
             logging.debug(f"  backlog key {key}")
             for line in cursor.backlog.getlist(key):
-                logging.debug(f"  backlog linenr {line.linenr}, text '{line.text}'" +
-                              f"is {'not ' if not line.is_consumed else ''} consumed")
+                logging.debug(f"  backlog linenr {line.linenr}, text '{line.text}' " +
+                              f"is {'not ' if not line.is_consumed else ''}consumed")
 
     def dump_current_state(self):
         """
