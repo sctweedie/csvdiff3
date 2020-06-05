@@ -23,17 +23,21 @@ from .output import Diff2OutputDriver
               "(used to identify matching lines across changed files)")
 @click.option("-d", "--debug", is_flag = True, default=False,
               help = "Enable logging in DEBUG.log")
+@click.option("-r", "--show-reordered-lines", is_flag = True, default = False,
+              help = "Show unchanged but reordered lines")
 @click.argument("file1", type=click.Path(exists = True))
 @click.argument("file2", type=click.Path(exists = True))
 
 def cli_diff2(file1, file2,
               colour, key,
-              debug):
+              debug, show_reordered_lines):
 
     colorama.init()
 
     if colour == None:
         colour = sys.stdout.isatty()
+
+    output_args = {'show_reordered_lines': show_reordered_lines}
 
     with open(file1, "rt") as file_LCA:
         # For 2-way diff, we just present the same file for
@@ -44,7 +48,8 @@ def cli_diff2(file1, file2,
                             debug = debug,
                             colour = colour,
                             reformat_all = False,
-                            output_driver_class = Diff2OutputDriver)
+                            output_driver_class = Diff2OutputDriver,
+                            output_args = output_args)
 
     sys.exit(rc)
 
@@ -76,8 +81,10 @@ def cli_diff2(file1, file2,
               required=True,
               help = "Identifies column name for the CSV files' primary key " + \
               "(used to identify matching lines across changed files)")
-@click.option("-d", "--debug", is_flag = True, default=False,
+@click.option("-d", "--debug", is_flag = True, default = False,
               help = "Enable logging in DEBUG.log")
+@click.option("-r", "--show-reordered-lines", is_flag = True, default = False,
+              help = "Show unchanged but reordered lines")
 @click.argument("file_common_name", type=click.Path(exists = False))
 @click.argument("old_file", type=click.Path(exists = True))
 @click.argument("old_hex", type=str)
@@ -90,7 +97,7 @@ def cli_diff2_git(file_common_name,
                   old_file, old_hex, old_mode,
                   new_file, new_hex, new_mode,
                   colour, key,
-                  debug):
+                  debug, show_reordered_lines):
 
     colorama.init()
 
@@ -107,6 +114,8 @@ def cli_diff2_git(file_common_name,
     if colour == None:
         colour = sys.stdout.isatty()
 
+    output_args = {'show_reordered_lines': show_reordered_lines}
+
     with open(old_file, "rt") as file_LCA:
         # For 2-way diff, we just present the same file for
         # both A and B.
@@ -117,7 +126,8 @@ def cli_diff2_git(file_common_name,
                             colour = colour,
                             reformat_all = False,
                             file_common_name = file_common_name,
-                            output_driver_class = Diff2OutputDriver)
+                            output_driver_class = Diff2OutputDriver,
+                            output_args = output_args)
 
     sys.exit(rc)
 

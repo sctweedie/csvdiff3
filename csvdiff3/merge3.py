@@ -748,7 +748,8 @@ def merge3(file_lca, file_a, file_b, key,
            lineterminator = "unix",
            reformat_all = False,
            file_common_name = None,
-           output_driver_class = Merge3OutputDriver):
+           output_driver_class = Merge3OutputDriver,
+           output_args = {}):
     """
     Perform a full 3-way merge on 3 given CSV files, using the given
     column name as a primary key.
@@ -793,7 +794,7 @@ def merge3(file_lca, file_a, file_b, key,
 
     # Initialise the merging state
 
-    output_driver = output_driver_class(output, dialect_args)
+    output_driver = output_driver_class(output, dialect_args, **output_args)
     state = __State(file_LCA, file_A, file_B, headers, output_driver,
                     colour = colour,
                     reformat_all = reformat_all)
@@ -820,13 +821,14 @@ def merge3(file_lca, file_a, file_b, key,
     try:
         while not state.EOF():
             merge3_next(state)
+
+        state.cursor_LCA.assert_finished()
+        state.cursor_A.assert_finished()
+        state.cursor_B.assert_finished()
+
     except AssertionError:
         state.dump_current_state()
         raise
-
-    state.cursor_LCA.assert_finished()
-    state.cursor_A.assert_finished()
-    state.cursor_B.assert_finished()
 
     if state.file_has_conflicts:
         return 1

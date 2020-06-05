@@ -14,7 +14,7 @@ class OutputDriver():
     3-way merge or to present the results as a 2- or 3-way diff.
     """
 
-    def __init__(self, stream, dialect_args):
+    def __init__(self, stream, dialect_args, *args, **kwargs):
         self.stream = stream
         self.dialect_args = dialect_args
 
@@ -160,6 +160,7 @@ class Merge3OutputDriver(OutputDriver):
 class Diff2OutputDriver(OutputDriver):
     def __init__(self, *args, **kwargs):
         OutputDriver.__init__(self, *args, **kwargs)
+        self.show_reordered_lines = kwargs['show_reordered_lines']
 
     def emit_preamble(self, state, options, file_LCA, file_A, file_B, file_common_name):
         # For 2-way diff we start the output with a standard
@@ -217,17 +218,43 @@ class Diff2OutputDriver(OutputDriver):
 
         if line_LCA and line_A:
             # If we have both lines present, it's not an add/delete,
-            # so it's an unmodified line: just ignore it.
-            return
+            # so it's an unmodified line.
+            #
+            # Is the line in the expected order, ie. is the state
+            # cursor at this line in all 3 files?  If so, then just
+            # ignore it.
+            if (state.cursor_LCA[0] == line_LCA and
+                state.cursor_A[0] == line_A and
+                state.cursor_B[0] == line_B):
+                return
 
-        # For deleted lines, we need to write the old text, not the
-        # new.
-        if not line_A:
-            text = line_LCA.text
+            # Special case: the header is not handled via the cursor
+            # mechanism (it is pre-read and handled specially at
+            # startup.)  But if we get a header here, it is clearly
+            # not reordered, so skip it.  (Merged/changed headers will
+            # still appear via emit_row(), not emit_text().)
+            if text == state.file_A.header.text:
+                return
+
+            # It's out of order; do we want to show it?
+            if not self.show_reordered_lines:
+                return
+
+            # Show out-of-order lines in normal colour
+            line = line_LCA
+            colour = ""
+            prefix = " "
+            key = state.cursor_LCA.current_key()
+
+        elif not line_A:
+            # For deleted lines, we need to write the old text, not the
+            # new.
+            line = line_LCA
             colour = state.text_red()
             prefix = "-"
             key = state.cursor_LCA.current_key()
         else:
+            line = line_A
             colour = state.text_green()
             prefix = "+"
             key = state.cursor_A.current_key()
@@ -238,15 +265,11 @@ class Diff2OutputDriver(OutputDriver):
         # but the full-line text will also have a trailing newline
         # that we need to remove first.
 
-        text = self.quote_newlines(text.strip("\n"))
+        text = self._row_to_text(state, line, line)
 
         self.stream.write(prefix + colour + text + state.text_reset() + "\n")
 
-    def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
-
-        key = state.cursor_A.current_key()
-        self.emit_line_numbers(state, line_LCA, line_A, key)
-
+    def _row_to_text(self, state, line_LCA, line_A):
         fields = []
         for field in state.headers.header_map:
             val_LCA = line_LCA.get_field(field.LCA_column, "")
@@ -261,7 +284,15 @@ class Diff2OutputDriver(OutputDriver):
                               state.text_green() +
                               f"+{self.quote_newlines(val_A)}+" +
                               state.text_reset() + "}")
-        self.stream.write(" " + ",".join(fields) + "\n")
+        return ",".join(fields)
+
+    def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
+        key = state.cursor_A.current_key()
+        self.emit_line_numbers(state, line_LCA, line_A, key)
+
+        self.stream.write(" " +
+                          self._row_to_text(state, line_LCA, line_A) +
+                          "\n")
 
     def emit_conflicts(self, state, line_LCA, line_A, line_B, conflicts):
         # A 2-way diff should never be able to produce conflicts!
