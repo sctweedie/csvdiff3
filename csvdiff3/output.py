@@ -175,14 +175,26 @@ class Diff2OutputDriver(OutputDriver):
             file2 = "b/" + file_common_name
 
         key = file_LCA.key
-        self.stream.write(state.text_bold() +
-                          f"{name} -k\"{key}\" " +
-                          f"{file1} {file2}\n" +
-                          state.text_bold() +
-                          f"--- {file1}\n" +
-                          state.text_bold() +
-                          f"+++ {file2}\n" +
-                          state.text_reset())
+
+        # Just save the preamble initially.  We will suppress it if we
+        # find no diffs to print; it will get printed the first time
+        # we find there's something else to emit.
+
+        self.saved_preamble = (state.text_bold() +
+                               f"{name} -k\"{key}\" " +
+                               f"{file1} {file2}\n" +
+                               state.text_bold() +
+                               f"--- {file1}\n" +
+                               state.text_bold() +
+                               f"+++ {file2}\n" +
+                               state.text_reset())
+
+    def flush_preamble(self):
+        if not self.saved_preamble:
+            return
+
+        self.stream.write(self.saved_preamble)
+        self.saved_preamble = None
 
     def emit_line_numbers(self, state, line_LCA, line_A, key):
         """
@@ -259,6 +271,7 @@ class Diff2OutputDriver(OutputDriver):
             prefix = "+"
             key = state.cursor_A.current_key()
 
+        self.flush_preamble()
         self.emit_line_numbers(state, line_LCA, line_A, key)
 
         # We want to quote newlines embedded within the CSV fields,
@@ -288,6 +301,8 @@ class Diff2OutputDriver(OutputDriver):
 
     def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
         key = state.cursor_A.current_key()
+
+        self.flush_preamble()
         self.emit_line_numbers(state, line_LCA, line_A, key)
 
         self.stream.write(" " +
