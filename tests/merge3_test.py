@@ -391,7 +391,7 @@ class TestAsymmetricLineChanges(MergeTest):
         self.run_and_compare(self.file_unquoted,
                              "testdata/simple_append1.csv",
                              "testdata/simple_append3.csv",
-                             "testdata/simple_append3.csv",
+                             "testdata/simple_append2.csv",
                              "name")
 
         # As the previous two, but with A/B reversed; output should be
