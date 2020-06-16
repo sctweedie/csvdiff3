@@ -249,18 +249,19 @@ def merge3_next(state):
     logging.debug("Next iteration: keys are %s, %s, %s" % \
                   (key_LCA, key_A, key_B))
 
+    line_LCA = state.cursor_LCA[0]
+    line_A = state.cursor_A[0]
+    line_B = state.cursor_B[0]
+
     # Are all the keys the same?  Easy, we've matched the lines so
     # process them now.  We always test this first for best
     # performance when merging files that are in largely the same
     # order.
 
     if key_LCA == key_A == key_B:
-        merge_same_keys(state, key_LCA)
+        merge_one_line(state, line_LCA, line_A, line_B)
+        state.consume(key_LCA, line_LCA, line_A, line_B)
         return
-
-    line_LCA = state.cursor_LCA[0]
-    line_A = state.cursor_A[0]
-    line_B = state.cursor_B[0]
 
     # Now the real work starts: figure how to handle the many, various
     # possibilities where the next lines in each source file may have
@@ -515,21 +516,6 @@ def find_next_matching_line(key, cursor):
 
     distance = line.linenr - cursor.linenr
     return (line, distance)
-
-def merge_same_keys(state, key_LCA):
-    """
-    All three branches have the same next key.
-    """
-
-    # This is the simplest case, with no special cases: perform an
-    # intelligent 3-way merge on the current state and move to the
-    # next line.
-
-    merge_one_line(state,
-                   state.cursor_LCA[0],
-                   state.cursor_A[0],
-                   state.cursor_B[0])
-    state.advance_all()
 
 
 def lookup_field(line, column):
