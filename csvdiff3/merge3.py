@@ -768,7 +768,7 @@ def merge3(file_lca, file_a, file_b, key,
         state.cursor_A.assert_finished()
         state.cursor_B.assert_finished()
 
-    except AssertionError:
+    except:
         state.dump_current_state()
         raise
 
