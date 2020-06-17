@@ -55,6 +55,7 @@ class Line:
         self.row = row
         self.linenr = linenr
         self.is_consumed = False
+        self.has_backlog_match = False
 
     def __format__(self, format):
         return str(self.row)
@@ -68,6 +69,15 @@ class Line:
             return Key(self.row[index])
         except IndexError:
             return Key('')
+
+    # For debugging we sometimes want to output a linenr even if we're
+    # not sure we actually have a line
+
+    @staticmethod
+    def linenr(line):
+        if not line:
+            return "n/a"
+        return line.linenr
 
 class FileReader:
     """
@@ -320,7 +330,20 @@ class Cursor:
         lines = self.file.lines_by_key[key]
         if not lines:
             return None
-        return lines[0]
+
+        # We will look forward in the matching lines, skipping any
+        # that have already been matched against the backlog; those
+        # lines should not be candidates for matching against any
+        # further lines with the same key.
+
+        for line in lines:
+            if not line.has_backlog_match:
+                return line
+
+        # If all future lines with this key already have matches in
+        # the backlog, then there's nothing left to match.
+
+        return None
 
     def consume(self, key, line):
         """
