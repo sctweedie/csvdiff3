@@ -58,7 +58,7 @@ class Line:
         self.LCA_backlog_match = None
 
     def __format__(self, format):
-        return str(self.row)
+        return str(self.row) + f" @ {self.linenr}"
 
     def __sub__(self, line):
         assert isinstance(line, Line)
