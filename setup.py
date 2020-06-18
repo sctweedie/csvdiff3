@@ -12,7 +12,7 @@ setuptools.setup(
     description="3-way CSV file merging utility",
     long_description=long_description,
     long_description_content_type="text/markdown",
-#   url="https://github.com/pypa/example-project",
+    url="https://github.com/sctweedie/csvdiff3",
     packages=setuptools.find_packages(),
     entry_points={
         'console_scripts': [
