@@ -705,7 +705,113 @@ class TestBlankAllDiff(MergeTest):
                              quote = "none",
                              reformat_all = True)
 
+class TestMultiReorder(MergeTest):
+    """
+    Tests for multiple instances of the same key, where both instances
+    are reordered to later on in the merge
+    """
 
+    def test_multi_reorder(self):
+
+        # Test with the change on first the A side, then B, then on
+        # both.  The result should be the same in each case.
+
+        self.run_and_compare("testdata/multiline.csv",
+                             "testdata/multiline_reorder.csv",
+                             "testdata/multiline.csv",
+                             "testdata/multiline_reorder.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
+
+        self.run_and_compare("testdata/multiline.csv",
+                             "testdata/multiline.csv",
+                             "testdata/multiline_reorder.csv",
+                             "testdata/multiline_reorder.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
+
+        self.run_and_compare("testdata/multiline.csv",
+                             "testdata/multiline_reorder.csv",
+                             "testdata/multiline_reorder.csv",
+                             "testdata/multiline_reorder.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
+
+
+class TestMultiReorderReverse(MergeTest):
+    """
+    Tests for multiple instances of the same key, but this time where
+    both instances are reordered to earlier lines in the file
+    """
+
+    def test_multi_reorder_reverse(self):
+
+        # Test with the change on first the A side, then B, then on
+        # both.  The result should be the same in each case.
+
+        self.run_and_compare("testdata/multiline_reorder.csv",
+                             "testdata/multiline.csv",
+                             "testdata/multiline_reorder.csv",
+                             "testdata/multiline.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
+
+        self.run_and_compare("testdata/multiline_reorder.csv",
+                             "testdata/multiline_reorder.csv",
+                             "testdata/multiline.csv",
+                             "testdata/multiline.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
+
+        self.run_and_compare("testdata/multiline_reorder.csv",
+                             "testdata/multiline.csv",
+                             "testdata/multiline.csv",
+                             "testdata/multiline.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
+
+
+
+class TestMultiReorderDelete(MergeTest):
+    """
+    Tests for multiple instances of the same key, where one instance
+    is reordered while another is deleted
+    """
+
+    def test_multi_reorder_del(self):
+
+        # Test with the change on first the A side, then B, then on
+        # both.  The result should be the same in each case.
+
+        self.run_and_compare("testdata/multiline.csv",
+                             "testdata/multiline_reorder_del.csv",
+                             "testdata/multiline.csv",
+                             "testdata/multiline_reorder_del.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
+
+        self.run_and_compare("testdata/multiline.csv",
+                             "testdata/multiline.csv",
+                             "testdata/multiline_reorder_del.csv",
+                             "testdata/multiline_reorder_del.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
+
+        self.run_and_compare("testdata/multiline.csv",
+                             "testdata/multiline_reorder_del.csv",
+                             "testdata/multiline_reorder_del.csv",
+                             "testdata/multiline_reorder_del.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
 
 
 if __name__ == "__main__":
