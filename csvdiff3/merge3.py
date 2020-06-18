@@ -95,6 +95,18 @@ class __State:
             logging.debug("  linenr %d, key %s, consumed %s" %
                           (line.linenr, key, line.is_consumed))
 
+            if line.LCA_backlog_match:
+                logging.debug("    has background match in LCA "
+                              f"at line {line.LCA_backlog_match.linenr}")
+
+            match_A = getattr(line, "backlog_match_in_A", None)
+            match_B = getattr(line, "backlog_match_in_B", None)
+            if match_A or match_B:
+                logging.debug("    matches "
+                              f"line {Line.linenr(match_A)} in A, "
+                              f"line {Line.linenr(match_B)} in B")
+
+
         # And dump the backlog
         logging.debug(f"  backlog: {len(cursor.backlog)}")
         for key in cursor.backlog:
@@ -276,15 +288,14 @@ def merge3_next(state):
     # NB. It's possible for both lines to match the backlog (eg. a
     # line in LCA has moved forward in both A and B.)
 
-    A_match_in_LCA, A_distance_in_LCA = find_next_matching_line(key_A, state.cursor_LCA)
-    A_match_in_B, A_distance_in_B = find_next_matching_line(key_A, state.cursor_B)
-
-    if line_A and line_A.has_backlog_match:
+    if line_A and line_A.LCA_backlog_match:
 
         # The matching line is in the backlog, so it before the current cursor
 
-        assert A_distance_in_LCA < 0
-        assert state.cursor_LCA.backlog[key_A] == A_match_in_LCA
+        LCA_backlog_line = line_A.LCA_backlog_match
+
+        assert LCA_backlog_line.linenr < state.cursor_LCA.linenr
+        assert state.cursor_LCA.backlog[key_A] == LCA_backlog_line
 
         # NB. we must *NOT* use "A_match_in_B" here to determine if
         # there's a matching line in B to use for the merge.  That
@@ -298,31 +309,36 @@ def merge3_next(state):
         # to repeat that search again and potentially come up with a
         # different line.
 
-        backlog_match_in_B = A_match_in_LCA.backlog_match_in_B
+        backlog_match_in_B = LCA_backlog_line.backlog_match_in_B
 
         logging.debug(f"  Action: match A in backlog (key {key_A})")
         logging.debug(f"    Matches line {Line.linenr(backlog_match_in_B)} in B")
-        merge_one_line(state, A_match_in_LCA, line_A, backlog_match_in_B)
-        state.consume(key_A, A_match_in_LCA, line_A, backlog_match_in_B)
+        merge_one_line(state, LCA_backlog_line, line_A, backlog_match_in_B)
+        state.consume(key_A, LCA_backlog_line, line_A, backlog_match_in_B)
         return
 
-    B_match_in_LCA, B_distance_in_LCA = find_next_matching_line(key_B, state.cursor_LCA)
-    B_match_in_A, B_distance_in_A = find_next_matching_line(key_B, state.cursor_A)
-
-    if line_B and line_B.has_backlog_match:
+    if line_B and line_B.LCA_backlog_match:
 
         # The matching line is in the backlog, so it before the current cursor
 
-        assert B_distance_in_LCA < 0
-        assert state.cursor_LCA.backlog[key_B] == B_match_in_LCA
+        LCA_backlog_line = line_B.LCA_backlog_match
 
-        backlog_match_in_A = B_match_in_LCA.backlog_match_in_A
+        assert LCA_backlog_line.linenr < state.cursor_LCA.linenr
+        assert state.cursor_LCA.backlog[key_B] == LCA_backlog_line
+
+        backlog_match_in_A = LCA_backlog_line.backlog_match_in_A
 
         logging.debug(f"  Action: match B in backlog (key {key_B})")
         logging.debug(f"    Matches line {Line.linenr(backlog_match_in_A)} in A")
-        merge_one_line(state, B_match_in_LCA, backlog_match_in_A, line_B)
-        state.consume(key_B, B_match_in_LCA, backlog_match_in_A, line_B)
+        merge_one_line(state, LCA_backlog_line, backlog_match_in_A, line_B)
+        state.consume(key_B, LCA_backlog_line, backlog_match_in_A, line_B)
         return
+
+    A_match_in_LCA, A_distance_in_LCA = find_next_matching_line(key_A, state.cursor_LCA)
+    A_match_in_B, A_distance_in_B = find_next_matching_line(key_A, state.cursor_B)
+
+    B_match_in_LCA, B_distance_in_LCA = find_next_matching_line(key_B, state.cursor_LCA)
+    B_match_in_A, B_distance_in_A = find_next_matching_line(key_B, state.cursor_A)
 
     # Next, we look to see if there is an insert or delete to process.
     # These do not involve matching lines between different files
@@ -474,7 +490,7 @@ def merge3_next(state):
             # match, so that further forward searches for the same key
             # don't match the same line twice
 
-            LCA_match_in_A.has_backlog_match = True
+            LCA_match_in_A.LCA_backlog_match = line_LCA
             logging.debug(f"    Set backlog match in A at line "
                           f"{Line.linenr(LCA_match_in_A)}")
             line_LCA.backlog_match_in_A = LCA_match_in_A
@@ -483,7 +499,7 @@ def merge3_next(state):
             # in B that may need the same mark on it.
 
             if LCA_match_in_B:
-                LCA_match_in_B.has_backlog_match = True
+                LCA_match_in_B.LCA_backlog_match = line_LCA
                 logging.debug(f"    Found backlog match in B at line "
                               f"{Line.linenr(LCA_match_in_B)}")
             line_LCA.backlog_match_in_B = LCA_match_in_B
@@ -529,7 +545,7 @@ def merge3_next(state):
         # match, so that further forward searches for the same key
         # don't match the same line twice
 
-        LCA_match_in_B.has_backlog_match = True
+        LCA_match_in_B.LCA_backlog_match = line_LCA
         logging.debug(f"    Set backlog match in B at line "
                       f"{Line.linenr(LCA_match_in_B)}")
         line_LCA.backlog_match_in_B = LCA_match_in_B
@@ -538,7 +554,7 @@ def merge3_next(state):
         # in B that may need the same mark on it.
 
         if LCA_match_in_A:
-            LCA_match_in_A.has_backlog_match = True
+            LCA_match_in_A.LCA_backlog_match = line_LCA
             logging.debug(f"    Found backlog match in A at line "
                           f"{Line.linenr(LCA_match_in_A)}")
         line_LCA.backlog_match_in_A = LCA_match_in_A

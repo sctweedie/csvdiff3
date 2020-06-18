@@ -55,7 +55,7 @@ class Line:
         self.row = row
         self.linenr = linenr
         self.is_consumed = False
-        self.has_backlog_match = False
+        self.LCA_backlog_match = None
 
     def __format__(self, format):
         return str(self.row)
@@ -322,9 +322,6 @@ class Cursor:
 
         assert key != None
 
-        if key in self.backlog:
-            return self.backlog[key]
-
         if not key in self.file.lines_by_key:
             return None
         lines = self.file.lines_by_key[key]
@@ -337,7 +334,7 @@ class Cursor:
         # further lines with the same key.
 
         for line in lines:
-            if not line.has_backlog_match:
+            if not line.LCA_backlog_match:
                 return line
 
         # If all future lines with this key already have matches in
@@ -363,14 +360,20 @@ class Cursor:
 
         line.is_consumed = True
 
-        # If this key is in the backlog, we should have found it
-        # there, so check that the backlog contains the right line and
-        # remove it.
+        # If this key is in the backlog, it is possible that it
+        # matches a different line.  If there are multiple lines with
+        # the same key, some may be reordered while others are
+        # deleted; for such a deleted line, we may find the other
+        # reordered line in the backlog, but the current line might
+        # not be there.
+        #
+        # So only remove the line from the backlog if it matches both
+        # by key and is the exact correct line.
 
         if key in self.backlog:
-            assert self.backlog[key] == line
-            self.backlog.popvalue(key, last=False)
-            return
+            if self.backlog[key] == line:
+                self.backlog.popvalue(key, last=False)
+                return
 
         # It's not in the backlog so it must be either the current
         # line or some future one.  Find the first match:
