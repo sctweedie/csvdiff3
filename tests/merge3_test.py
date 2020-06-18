@@ -814,6 +814,36 @@ class TestMultiReorderDelete(MergeTest):
                              reformat_all = True)
 
 
+class TestMultiReorderConflict(MergeTest):
+    """
+    Tests for multiple instances of the same key, where one instance
+    is reordered while another is deleted, and in which both lines are
+    also modified on the other side of the merge.
+    """
+
+    def test_multi_reorder_conflict(self):
+
+        # Test with the changed lines on the A side and the delete on
+        # B, then vice-versa.
+
+        self.run_and_compare("testdata/multiline.csv",
+                             "testdata/multiline_reorder_update.csv",
+                             "testdata/multiline_reorder_del.csv",
+                             "testdata/multiline_reorder_conflicts1.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
+
+        self.run_and_compare("testdata/multiline.csv",
+                             "testdata/multiline_reorder_del.csv",
+                             "testdata/multiline_reorder_update.csv",
+                             "testdata/multiline_reorder_conflicts2.csv",
+                             "name",
+                             quote = "none",
+                             reformat_all = True)
+
+
+
 if __name__ == "__main__":
     unittest.main()
 

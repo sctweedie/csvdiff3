@@ -1,0 +1,18 @@
+name,number
+>>>>>> input @6 (apple)
+>>>>>> number = 4
+apple,4
+====== input Deleted @3
+====== number = None
+<<<<<<
+banana,3
+pear,4
+peach,5
+>>>>>> input @5 (apple)
+>>>>>> number = 3
+apple,3
+====== input @5 (apple)
+====== number = 2
+apple,2
+<<<<<<
+grape,6
