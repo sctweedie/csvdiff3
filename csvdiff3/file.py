@@ -376,16 +376,25 @@ class Cursor:
                 return
 
         # It's not in the backlog so it must be either the current
-        # line or some future one.  Find the first match:
+        # line or some future one.
 
-        found_line = self.file.lines_by_key[key].pop(0)
+        # It will *almost* always be the first value in the
+        # lines-by-key lookup, but there is one case where it won't be:
+        #
+        # if
+        # * we have multiple lines with the same key,
+        # * one is pushed to the backlog, and
+        # * another one is deleted
+        #
+        # then the deleted one may get emitted (and hence consumed)
+        # before we get to the backlog line.
+        #
+        # So don't make assumptions about which line we're matching here;
 
-        # Check that the line we have is in fact the earliest match:
+        self.file.lines_by_key[key].remove(line)
 
-        assert found_line == line
-
-        # and if it is the current line, we can advance to the next
-        # line.
+        # just check by line number whether we can safely advance to
+        # the next line.
 
         if line.linenr == self.linenr:
             self.advance()
