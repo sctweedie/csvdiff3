@@ -7,6 +7,7 @@ import tempfile
 
 import colorama
 
+from .merge3 import merge3
 from .output import Merge3OutputDriver
 
 @click.command()
@@ -57,14 +58,14 @@ def cli_merge3(filename_lca, filename_a, filename_b,
     if output_file:
 
         with tempfile.NamedTemporaryFile("wt") as temp_output:
-            rc = merge3.merge3(filename_lca, filename_a, filename_b, key,
-                               output = temp_output,
-                               debug = debug,
-                               colour = colour,
-                               quote = quote,
-                               lineterminator = lineterminator,
-                               reformat_all = reformat_all,
-                               output_driver = Merge3OutputDriver)
+            rc = merge3(filename_lca, filename_a, filename_b, key,
+                        output = temp_output,
+                        debug = debug,
+                        colour = colour,
+                        quote = quote,
+                        lineterminator = lineterminator,
+                        reformat_all = reformat_all,
+                        output_driver_class = Merge3OutputDriver)
 
             temp_name = temp_output.name
             temp_output.flush()
@@ -72,13 +73,13 @@ def cli_merge3(filename_lca, filename_a, filename_b,
 
     else:
 
-        rc = merge3.merge3(filename_lca, filename_a, filename_b, key,
-                           debug = debug,
-                           colour = colour,
-                           quote = quote,
-                           lineterminator = lineterminator,
-                           reformat_all = reformat_all,
-                           output_driver = Merge3OutputDriver)
+        rc = merge3(filename_lca, filename_a, filename_b, key,
+                    debug = debug,
+                    colour = colour,
+                    quote = quote,
+                    lineterminator = lineterminator,
+                    reformat_all = reformat_all,
+                    output_driver_class = Merge3OutputDriver)
 
     sys.exit(rc)
 
