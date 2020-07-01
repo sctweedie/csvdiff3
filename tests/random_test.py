@@ -225,9 +225,9 @@ class TweakedRandomFile(RandomFile):
                 line = ",".join(words)
                 yield line
             elif choice == 6:
-                # Replace the key with a blank
+                # Replace the key with a common value to maximise duplicates
                 words = line.split(",")
-                words[0] = ''
+                words[0] = 'common'
                 line = ",".join(words)
                 yield line
             else:
