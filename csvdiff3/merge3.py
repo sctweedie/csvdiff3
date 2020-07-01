@@ -206,16 +206,6 @@ def merge3_next(state):
                   f"{Line.linenr(line_A)} [{key_A}] "
                   f"{Line.linenr(line_B)} [{key_B}]")
 
-    # Are all the keys the same?  Easy, we've matched the lines so
-    # process them now.  We always test this first for best
-    # performance when merging files that are in largely the same
-    # order.
-
-    if key_LCA == key_A == key_B:
-        merge_one_line(state, line_LCA, line_A, line_B)
-        state.consume(key_LCA, line_LCA, line_A, line_B)
-        return
-
     # Now the real work starts: figure how to handle the many, various
     # possibilities where the next lines in each source file may have
     # different keys.
@@ -275,6 +265,20 @@ def merge3_next(state):
         logging.debug(f"    Matches line {Line.linenr(backlog_match_in_A)} in A")
         merge_one_line(state, LCA_backlog_line, backlog_match_in_A, line_B)
         state.consume(key_B, LCA_backlog_line, backlog_match_in_A, line_B)
+        return
+
+    # Are all the keys the same?  Easy, we've matched the lines so
+    # process them now.
+    #
+    # We test as soon as we have tested for backlog matches (we never
+    # want to override matching decisions that have already been taken
+    # for backlog lines), but before we do any other tests as this is
+    # the common, performance-sensitive case when merging files that
+    # are in largely the same order.
+
+    if key_LCA == key_A == key_B:
+        merge_one_line(state, line_LCA, line_A, line_B)
+        state.consume(key_LCA, line_LCA, line_A, line_B)
         return
 
     A_match_in_LCA, A_distance_in_LCA = find_next_matching_line(key_A, state.cursor_LCA)
