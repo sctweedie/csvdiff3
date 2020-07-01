@@ -233,6 +233,9 @@ def merge3_next(state):
 
         LCA_backlog_line = line_A.LCA_backlog_match
 
+        logging.debug(f"  Action: match A in backlog (key {key_A}, "
+                      f"LCA line {LCA_backlog_line.linenr})")
+
         assert LCA_backlog_line.linenr < state.cursor_LCA.linenr
         assert state.cursor_LCA.backlog[key_A] == LCA_backlog_line
 
@@ -250,7 +253,6 @@ def merge3_next(state):
 
         backlog_match_in_B = LCA_backlog_line.backlog_match_in_B
 
-        logging.debug(f"  Action: match A in backlog (key {key_A})")
         logging.debug(f"    Matches line {Line.linenr(backlog_match_in_B)} in B")
         merge_one_line(state, LCA_backlog_line, line_A, backlog_match_in_B)
         state.consume(key_A, LCA_backlog_line, line_A, backlog_match_in_B)
@@ -262,12 +264,14 @@ def merge3_next(state):
 
         LCA_backlog_line = line_B.LCA_backlog_match
 
+        logging.debug(f"  Action: match B in backlog (key {key_B}, "
+                      f"LCA line {LCA_backlog_line.linenr})")
+
         assert LCA_backlog_line.linenr < state.cursor_LCA.linenr
         assert state.cursor_LCA.backlog[key_B] == LCA_backlog_line
 
         backlog_match_in_A = LCA_backlog_line.backlog_match_in_A
 
-        logging.debug(f"  Action: match B in backlog (key {key_B})")
         logging.debug(f"    Matches line {Line.linenr(backlog_match_in_A)} in A")
         merge_one_line(state, LCA_backlog_line, backlog_match_in_A, line_B)
         state.consume(key_B, LCA_backlog_line, backlog_match_in_A, line_B)
@@ -418,11 +422,11 @@ def merge3_next(state):
             # move, so push LCA to the backlog (and B too if it has
             # the same key as LCA.)
 
-            logging.debug(f"    Push LCA line {key_LCA} to backlog")
+            logging.debug(f"    Push LCA line {line_LCA.linenr} to backlog")
             state.cursor_LCA.move_to_backlog()
 
             if key_LCA == key_B:
-                logging.debug(f"    Push B line {key_B} to backlog")
+                logging.debug(f"    Push B line {line_B.linenr} to backlog")
                 state.cursor_B.move_to_backlog()
 
             # We also mark the future line in A as having a backlog
