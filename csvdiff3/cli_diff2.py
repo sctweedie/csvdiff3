@@ -37,7 +37,8 @@ def cli_diff2(file1, file2,
     if colour == None:
         colour = sys.stdout.isatty()
 
-    output_args = {'show_reordered_lines': show_reordered_lines}
+    output_args = {'show_reordered_lines': show_reordered_lines,
+                   'preamble_extra_text': None}
 
     with open(file1, "rt") as file_LCA:
         # For 2-way diff, we just present the same file for
@@ -92,10 +93,13 @@ def cli_diff2(file1, file2,
 @click.argument("new_file", type=click.Path(exists = True))
 @click.argument("new_hex", type=str)
 @click.argument("new_mode", type=str)
+@click.argument("new_name", type=str, required = False, default = None)
+@click.argument("extra_text", type=str, required = False, default = None)
 
 def cli_diff2_git(file_common_name,
                   old_file, old_hex, old_mode,
                   new_file, new_hex, new_mode,
+                  new_name, extra_text,
                   colour, key,
                   debug, show_reordered_lines):
 
@@ -114,7 +118,8 @@ def cli_diff2_git(file_common_name,
     if colour == None:
         colour = sys.stdout.isatty()
 
-    output_args = {'show_reordered_lines': show_reordered_lines}
+    output_args = {'show_reordered_lines': show_reordered_lines,
+                   'preamble_extra_text': extra_text}
 
     with open(old_file, "rt") as file_LCA:
         # For 2-way diff, we just present the same file for

@@ -161,6 +161,7 @@ class Diff2OutputDriver(OutputDriver):
     def __init__(self, *args, **kwargs):
         OutputDriver.__init__(self, *args, **kwargs)
         self.show_reordered_lines = kwargs['show_reordered_lines']
+        self.preamble_extra_text = kwargs['preamble_extra_text']
 
     def emit_preamble(self, state, options, file_LCA, file_A, file_B, file_common_name):
         # For 2-way diff we start the output with a standard
@@ -182,19 +183,32 @@ class Diff2OutputDriver(OutputDriver):
 
         self.saved_preamble = (state.text_bold() +
                                f"{name} -k\"{key}\" " +
-                               f"{file1} {file2}\n" +
-                               state.text_bold() +
-                               f"--- {file1}\n" +
-                               state.text_bold() +
-                               f"+++ {file2}\n" +
-                               state.text_reset())
+                               f"{file1} {file2}\n")
+
+        # If we have extra preamble text, we always emit it
+        # immediately after the cmdline (to be consistent with "git
+        # diff".)  But the following "---"/"+++" lines are still
+        # conditional on there being additional diff text to display.
+
+        if self.preamble_extra_text:
+            self.flush_preamble()
+
+            for line in self.preamble_extra_text.strip().split("\n"):
+                self.stream.write(state.text_bold() +
+                                  line + "\n")
+
+        self.saved_preamble += (state.text_bold() +
+                                f"--- {file1}\n" +
+                                state.text_bold() +
+                                f"+++ {file2}\n" +
+                                state.text_reset())
 
     def flush_preamble(self):
         if not self.saved_preamble:
             return
 
         self.stream.write(self.saved_preamble)
-        self.saved_preamble = None
+        self.saved_preamble = ""
 
     def emit_line_numbers(self, state, line_LCA, line_A, key):
         """
