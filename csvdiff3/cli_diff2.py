@@ -10,6 +10,7 @@ import colorama
 
 from .merge3 import merge3
 from .output import Diff2OutputDriver
+from .file import CSVKeyError
 
 @click.command()
 
@@ -45,12 +46,17 @@ def cli_diff2(file1, file2,
         # both A and B.
         with open(file2, "rt") as file_A:
             with open(file2, "rt") as file_B:
-                rc = merge3(file_LCA, file_A, file_B, key,
-                            debug = debug,
-                            colour = colour,
-                            reformat_all = False,
-                            output_driver_class = Diff2OutputDriver,
-                            output_args = output_args)
+                try:
+                    rc = merge3(file_LCA, file_A, file_B, key,
+                                debug = debug,
+                                colour = colour,
+                                reformat_all = False,
+                                output_driver_class = Diff2OutputDriver,
+                                output_args = output_args,
+                                filename_LCA = file1, filename_A = file2, filename_B = file2)
+                except CSVKeyError as e:
+                    print(f"{os.path.basename(sys.argv[0])}: Error: {e.message}", file=sys.stdout)
+                    sys.exit(1)
 
     sys.exit(rc)
 
@@ -126,13 +132,18 @@ def cli_diff2_git(file_common_name,
         # both A and B.
         with open(new_file, "rt") as file_A:
             with open(new_file, "rt") as file_B:
-                rc = merge3(file_LCA, file_A, file_B, key,
-                            debug = debug,
-                            colour = colour,
-                            reformat_all = False,
-                            file_common_name = file_common_name,
-                            output_driver_class = Diff2OutputDriver,
-                            output_args = output_args)
+                try:
+                    rc = merge3(file_LCA, file_A, file_B, key,
+                                debug = debug,
+                                colour = colour,
+                                reformat_all = False,
+                                file_common_name = file_common_name,
+                                output_driver_class = Diff2OutputDriver,
+                                output_args = output_args,
+                                filename_LCA = old_file, filename_A = new_file, filename_B = new_file)
+                except CSVKeyError as e:
+                    print(f"{os.path.basename(sys.argv[0])}: Error: {e.message}", file=sys.stdout)
+                    sys.exit(1)
 
     sys.exit(rc)
 

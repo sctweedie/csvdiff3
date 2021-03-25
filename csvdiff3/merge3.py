@@ -736,7 +736,8 @@ def merge3(file_lca, file_a, file_b, key,
            reformat_all = False,
            file_common_name = None,
            output_driver_class = Merge3OutputDriver,
-           output_args = {}):
+           output_args = {},
+           filename_LCA = "LCA", filename_A = "A", filename_B = "B"):
     """
     Perform a full 3-way merge on 3 given CSV files, using the given
     column name as a primary key.
@@ -746,9 +747,9 @@ def merge3(file_lca, file_a, file_b, key,
         logging.basicConfig(filename = "DEBUG.log", level = logging.DEBUG)
         logging.debug("Started new run.")
 
-    file_LCA = CSVFile(file_lca, key=key)
-    file_A = CSVFile(file_a, key=key)
-    file_B = CSVFile(file_b, key=key)
+    file_LCA = CSVFile(file_lca, key=key, filename = filename_LCA)
+    file_A = CSVFile(file_a, key=key, filename = filename_A)
+    file_B = CSVFile(file_b, key=key, filename = filename_B)
 
     headers = Headers(file_LCA.header.row,
                       file_A.header.row,

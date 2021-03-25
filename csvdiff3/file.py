@@ -167,6 +167,12 @@ class CSVHeaderFile:
             yield Line(line, row, linenr)
             linenr += 1
 
+class CSVKeyError(KeyError):
+    def __init__(self, message, *args):
+        self.message = message
+
+        super(CSVKeyError, self).__init__(message, *args)
+
 class CSVFile:
     """
     Main CSV file class.
@@ -198,7 +204,7 @@ class CSVFile:
                 self.lines = [EmptyLine()]
                 return
 
-            raise KeyError
+            raise CSVKeyError(f"""key "{key}" not found in file {filename}""")
 
         self.key_index = self.header.row.index(next(x for x in self.header.row
                                                     if x == key))

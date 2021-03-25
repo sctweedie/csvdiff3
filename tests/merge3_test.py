@@ -24,6 +24,9 @@ def merge3_named(filename_LCA, filename_A, filename_B,
         return merge3.merge3(file_LCA, file_A, file_B,
                              key,
                              output = file_output,
+                             filename_LCA = "input",
+                             filename_A = "input",
+                             filename_B = "input",
                              **kwargs)
 
 def keep_copy(testfile, savefile):
