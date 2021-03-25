@@ -144,7 +144,21 @@ class CSVHeaderFile:
     def __init__(self, stream, **args):
         self.reader = CSVLineReader(stream, **args)
         self.iterator = iter(self.reader)
-        text,row = next(self.iterator)
+        self.empty = False
+
+        try:
+            text,row = next(self.iterator)
+        except StopIteration:
+            # If an input file is entirely empty --- we fail to
+            # iterate on the next() to grab the very first line ---
+            # then store a blank header line and mark the file as
+            # empty, but do not fail.  We will handle empty files
+            # later (eg. for diffing the creation or deletion of a
+            # file.)
+            self.empty = True
+            text=None
+            row=[]
+
         self.header = Line(text,row,1)
 
     def __iter__(self):
@@ -171,6 +185,19 @@ class CSVFile:
         self.filename = filename
 
         if not key in self.header.row:
+            # One special case: a completely empty file is not
+            # expected to have a header row at all.  We won't find the
+            # key in the header, but we won't be looking up lines by
+            # that key either.
+
+            if self.reader.empty:
+
+                # When we see an empty file, we still create a dummy
+                # header line at line[1] with no contents.
+
+                self.lines = [EmptyLine()]
+                return
+
             raise KeyError
 
         self.key_index = self.header.row.index(next(x for x in self.header.row
@@ -306,7 +333,7 @@ class Cursor:
         return self.getline(0).get_field(self.file.key_index)
 
     def EOF(self):
-        return self.linenr > self.file.last_line
+        return self.file.reader.empty or self.linenr > self.file.last_line
 
     def assert_finished(self):
         assert self.EOF()
