@@ -803,7 +803,7 @@ def merge3(file_lca, file_a, file_b, key,
     else:
         output_driver.emit_csv_row(state,
                                    file_LCA[1], file_A[1], file_B[1],
-                                   headers.headers)
+                                   headers.headers, row_key = "<Column names>")
 
     try:
         while not state.EOF():

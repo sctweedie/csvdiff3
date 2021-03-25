@@ -40,7 +40,7 @@ class OutputDriver():
         pass
 
     @abstractmethod
-    def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
+    def emit_csv_row(self, state, line_LCA, line_A, line_B, row, row_key = None):
         """
         Emit a row of merged CSV.
 
@@ -89,7 +89,7 @@ class Merge3OutputDriver(OutputDriver):
             return
         self.stream.write(text)
 
-    def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
+    def emit_csv_row(self, state, line_LCA, line_A, line_B, row, row_key = None):
         # Do nothing if there is no content in the merged output
         # (ie. this line has been deleted.)
         if not row:
@@ -299,11 +299,56 @@ class Diff2OutputDriver(OutputDriver):
     def _row_to_text(self, state, line_LCA, line_A):
         fields = []
         for field in state.headers.header_map:
-            val_LCA = line_LCA.get_field(field.LCA_column)
-            val_A = line_A.get_field(field.A_column)
+            # Columns may be added/removed so record which ones we
+            # actually have as we do the lookup
 
-            if val_LCA == val_A:
+            col_LCA = field.LCA_column
+            col_A = field.A_column
+
+            val_LCA = None if col_LCA == None else line_LCA.get_field(col_LCA)
+            val_A = None if col_A == None else line_A.get_field(col_A)
+
+            # We output just the text contents (eg. "text,"), not a
+            # diff between contents (eg. "{-old_text-,+new_text+},")
+            # in two cases:
+            #
+            # First, when the before/after contents are the same (LCA
+            # == A contents); and second, when the *lines* are the
+            # same.
+            #
+            # The second case matters if we are adding/removing
+            # columns; in that case, we might find that one of the
+            # fields is simply not present in the entire LCA or A
+            # file, so can't be looked up for the first test.  This
+            # second test catches that case when we know we're
+            # emitting the whole line, not a field-by-field diff
+            # (eg. when we're explicitly handling an inserted or
+            # deleted line, but when the columns have also changed.)
+
+            if val_LCA == val_A or line_LCA == line_A:
                 fields.append(self.quote_newlines(val_A))
+
+            elif val_LCA == None:
+                if val_A == "":
+                    # When inserting a column and a given line
+                    # contains no data for that new column, don't emit
+                    # a change field for that: it just clutters the
+                    # output, especially when many lines are affected.
+                    fields.append("")
+                else:
+                    fields.append("{" + state.text_green() +
+                                  f"+{self.quote_newlines(val_A)}+" +
+                                  state.text_reset() + "}")
+            elif val_A == None:
+                if val_LCA == "":
+                    # Likewise skip the change field when deleting a
+                    # column if a line previously had no data for that
+                    # column
+                    fields.append("")
+                else:
+                    fields.append("{" + state.text_red() +
+                                  f"-{self.quote_newlines(val_LCA)}-" +
+                                  state.text_reset() + "}")
             else:
                 fields.append("{" + state.text_red() +
                               f"-{self.quote_newlines(val_LCA)}-" +
@@ -313,8 +358,21 @@ class Diff2OutputDriver(OutputDriver):
                               state.text_reset() + "}")
         return ",".join(fields)
 
-    def emit_csv_row(self, state, line_LCA, line_A, line_B, row):
-        key = state.cursor_A.current_key()
+    def emit_csv_row(self, state, line_LCA, line_A, line_B, row, row_key = None):
+        key = row_key or state.cursor_A.current_key()
+
+        # Special case first: normally we get here only if we have
+        # partial updates within a line.  Wholesale insert/delete of
+        # lines gets sent to emit_csv_text() instead.
+        #
+        # But if we are *also* changing columns, then that gets sent
+        # here instead; so we still check for insert/delete and send
+        # an appropriate whole-line output in that case rather than
+        # going to field-by-field output.
+
+        if (not line_LCA) or (not line_A):
+            self.emit_text(state, line_LCA, line_A, line_B, row)
+            return
 
         self.flush_preamble()
         self.emit_line_numbers(state, line_LCA, line_A, key)
