@@ -79,6 +79,20 @@ class Line:
             return "n/a"
         return line.linenr
 
+# We need to be able to load completely empty files (eg. when
+# performing a diff on a newly-created file vs. /dev/null).
+#
+# Such files will have no lines in their content, but we manually
+# provide a dummy initial header line with no content for consistency:
+# the rest of the code can easily see there are no columns in the file
+# just by looking up the header line contents as usual.
+
+class EmptyLine(Line):
+    def __init__(self):
+        self.text = None
+        self.row = []
+        self.linenr = 1
+
 class FileReader:
     """
     File reader which also retains the original, unmodified contents of
