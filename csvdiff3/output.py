@@ -167,6 +167,11 @@ class Diff2OutputDriver(OutputDriver):
         # For 2-way diff we start the output with a standard
         # diff-style header
 
+        all_headers = state.headers.map_all_headers(file_LCA.header.row,
+                                                    file_A.header.row,
+                                                    file_B.header.row)
+        self.all_headers = all_headers
+
         name = os.path.basename(sys.argv[0])
         file1 = file_LCA.reader.reader.file.stream.name
         file2 = file_A.reader.reader.file.stream.name
@@ -298,7 +303,7 @@ class Diff2OutputDriver(OutputDriver):
 
     def _row_to_text(self, state, line_LCA, line_A):
         fields = []
-        for field in state.headers.header_map:
+        for field in self.all_headers:
             # Columns may be added/removed so record which ones we
             # actually have as we do the lookup
 
