@@ -292,7 +292,7 @@ class Diff2OutputDriver(OutputDriver):
         # but the full-line text will also have a trailing newline
         # that we need to remove first.
 
-        text = self._row_to_text(state, line, line)
+        text = ",".join(map(self.quote_newlines, line.row))
 
         self.stream.write(prefix + colour + text + state.text_reset() + "\n")
 
