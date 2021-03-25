@@ -370,3 +370,87 @@ class Headers:
             logging.debug('  Column %d ("%s"): from LCA %s, A %s, B %s' %
                           (column, map.name,
                            map.LCA_column, map.A_column, map.B_column))
+
+    # For 3-way merge, we only care about mapping which columns appear
+    # where in the output.
+    #
+    # But for diffs, we need to record both added and removed columns;
+    # so generate an additional map that inserts removed columns at
+    # appropriate places in the map.
+
+    def map_all_headers(self, header_LCA, header_A, header_B):
+
+        def add_to_output_map(key):
+            """Add a given key to the output map, also removing that key from the
+            list of outstanding keys in each key source"""
+
+            nonlocal output_map, left_in_LCA, left_in_A, left_in_B, left_in_map, state;
+
+            map = HeaderMap.from_state(state, key)
+            output_map.append(map)
+
+            if map.LCA_column != None:
+                left_in_LCA.remove((map.LCA_column, key))
+            if map.A_column != None:
+                left_in_A.remove((map.A_column, key))
+            if map.B_column != None:
+                left_in_B.remove((map.A_column, key))
+
+            if key in left_in_map:
+                left_in_map.remove(key)
+
+        all_headers = set(header_LCA) | set(header_A) | set(header_B)
+        map_headers = [map.name for map in self.header_map]
+        missing_headers = all_headers.difference(map_headers)
+
+        # Make a copy of all the keys still left in headers A and B
+        left_in_LCA = list(enumerate(header_LCA))
+        left_in_A = list(enumerate(header_A))
+        left_in_B = list(enumerate(header_B))
+
+        left_in_map = list(map_headers)
+
+        output_map = []
+
+        # Now construct a new map, trying to preserve as much order as
+        # possible from both the added and removed keys.
+        #
+        # We will iterate over the main output map, copying those keys
+        # to the full map of all keys, removing each key from the list
+        # of leftovers in LCA/A/B as we go.  As we remove keys,
+        # whenever we discover that a missing key has reached the
+        # starting position of any leftover list, we will add that key
+        # next.
+        #
+        # This should result in missing keys being reinsterted at
+        # roughly the location they were previously in (although if
+        # keys are being reordered, there will be no exact correct
+        # location for them.)
+
+        state = Headers.__State(header_LCA, header_A, header_B)
+
+        while left_in_LCA or left_in_A or left_in_B:
+
+            if left_in_LCA:
+                _, next_LCA = left_in_LCA[0]
+                if next_LCA in missing_headers:
+                    add_to_output_map(next_LCA)
+                    continue
+
+            if left_in_A:
+                _, next_A = left_in_A[0]
+                if next_A in missing_headers:
+                    add_to_output_map(next_A)
+                    continue
+
+            if left_in_B:
+                _, next_B = left_in_B[0]
+                if next_B in missing_headers:
+                    add_to_output_map(next_B)
+                    continue
+
+            next_map = left_in_map[0]
+            add_to_output_map(next_map)
+
+        return output_map
+
