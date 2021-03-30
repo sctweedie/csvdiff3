@@ -8,10 +8,10 @@ import csv
 import os
 
 class Options:
-    def __init__(self):
-        self.quote = None
-        self.key = None
-        self.lineterminator = None
+    def __init__(self, quote = None, key = None, lineterminator = None):
+        self.quote = quote
+        self.key = key
+        self.lineterminator = lineterminator
 
     def csv_kwargs(self):
         """
