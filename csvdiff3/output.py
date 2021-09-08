@@ -275,7 +275,7 @@ class Diff2OutputDriver(OutputDriver):
             line = line_LCA
             colour = ""
             prefix = " "
-            key = state.cursor_LCA.current_key()
+            key = state.cursor_A.current_key()
 
         elif not line_A:
             # For deleted lines, we need to write the old text, not the
