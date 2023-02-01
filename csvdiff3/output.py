@@ -303,6 +303,7 @@ class Diff2OutputDriver(OutputDriver):
 
     def _row_to_text(self, state, line_LCA, line_A):
         fields = []
+        modified = False
         for field in self.all_headers:
             # Columns may be added/removed so record which ones we
             # actually have as we do the lookup
@@ -332,8 +333,11 @@ class Diff2OutputDriver(OutputDriver):
 
             if val_LCA == val_A or line_LCA == line_A:
                 fields.append(self.quote_newlines(val_A))
+                continue
 
-            elif val_LCA == None:
+            modified = True
+
+            if val_LCA == None:
                 if val_A == "":
                     # When inserting a column and a given line
                     # contains no data for that new column, don't emit
@@ -361,14 +365,18 @@ class Diff2OutputDriver(OutputDriver):
                               state.text_green() +
                               f"+{self.quote_newlines(val_A)}+" +
                               state.text_reset() + "}")
-        return ",".join(fields)
+
+        line = ",".join(fields)
+        return (line, modified)
 
     def emit_csv_row(self, state, line_LCA, line_A, line_B, row, row_key = None):
         key = row_key or state.cursor_A.current_key()
 
-        # Special case first: normally we get here only if we have
-        # partial updates within a line.  Wholesale insert/delete of
-        # lines gets sent to emit_csv_text() instead.
+        # Special cases first:
+
+        # Normally we get here only if we have partial updates within
+        # a line.  Wholesale insert/delete of lines gets sent to
+        # emit_csv_text() instead.
         #
         # But if we are *also* changing columns, then that gets sent
         # here instead; so we still check for insert/delete and send
@@ -379,12 +387,27 @@ class Diff2OutputDriver(OutputDriver):
             self.emit_text(state, line_LCA, line_A, line_B, row)
             return
 
+        # Now, check for headers.  If we're doing a merge3 then we
+        # emit the headers always; but for diff, we want to suppress
+        # headers unless there's an actual change in the columns.
+        #
+        # Normally, unchanged lines get handled by emit_text() instead
+        # and we catch this in that method above.  *BUT* we may get
+        # here if the text has changed (eg. quoting is different) but
+        # the actual header columns are the same.
+        #
+        # Check for that, and don't output anything in that case.
+
+        text,modified = self._row_to_text(state, line_LCA, line_A)
+
+        if row_key == "<Column names>":
+            if not modified:
+                return
+
         self.flush_preamble()
         self.emit_line_numbers(state, line_LCA, line_A, key)
 
-        self.stream.write(" " +
-                          self._row_to_text(state, line_LCA, line_A) +
-                          "\n")
+        self.stream.write(" " + text + "\n")
 
     def emit_conflicts(self, state, line_LCA, line_A, line_B, conflicts):
         # A 2-way diff should never be able to produce conflicts!
