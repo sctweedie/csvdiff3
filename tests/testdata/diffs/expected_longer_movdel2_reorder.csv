@@ -1,0 +1,17 @@
+diff2_logic_test.py -k"name" testdata/longer.csv testdata/longer_movdel2.csv
+--- testdata/longer.csv
++++ testdata/longer_movdel2.csv
+@@ -2 @@ apple
+-apple,2
+@@ -7 +3 @@ pomegranate
+ pomegranate,7
+@@ -8 +5 @@ orange
+ orange,8
+@@ -9 +6 @@ strawberry
+ strawberry,9
+@@ -10 +7 @@ blueberry
+ blueberry,10
+@@ -5 +8 @@ plum
+ plum,{-5-,+55+}
+@@ -6 @@ grape
+-grape,6

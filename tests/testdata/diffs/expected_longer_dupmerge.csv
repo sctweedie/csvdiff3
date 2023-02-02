@@ -1,0 +1,9 @@
+diff2_logic_test.py -k"name" testdata/longer.csv testdata/longer_dupmerge.csv
+--- testdata/longer.csv
++++ testdata/longer_dupmerge.csv
+@@ -9 +4 @@ strawberry
+ strawberry,{-9-,+99+}
+@@ +10 @@ apple
++apple,22
+@@ +11 @@ strawberry
++strawberry,9

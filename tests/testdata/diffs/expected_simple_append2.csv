@@ -1,0 +1,7 @@
+diff2_logic_test.py -k"name" testdata/simple.csv testdata/simple_append2.csv
+--- testdata/simple.csv
++++ testdata/simple_append2.csv
+@@ +4 @@ pear
++pear,4
+@@ +5 @@ plum
++plum,5

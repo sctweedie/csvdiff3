@@ -1,0 +1,7 @@
+diff2_logic_test.py -k"name" testdata/multi_blank_0.csv testdata/multi_blank_2.csv
+--- testdata/multi_blank_0.csv
++++ testdata/multi_blank_2.csv
+@@ +3 @@ 
++
+@@ +4 @@ 
++

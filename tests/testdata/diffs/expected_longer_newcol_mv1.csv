@@ -1,0 +1,23 @@
+diff2_logic_test.py -k"name" testdata/longer.csv testdata/longer_newcol_mv1.csv
+--- testdata/longer.csv
++++ testdata/longer_newcol_mv1.csv
+@@ -1 +1 @@ <Column names>
+ name,count,{+capname+}
+@@ -4 +2 @@ pear
+ pear,4,{+Pear+}
+@@ -5 +3 @@ plum
+ plum,5,{+Plum+}
+@@ -6 +4 @@ grape
+ grape,6,{+Grape+}
+@@ -7 +5 @@ pomegranate
+ pomegranate,7,{+Pomegranate+}
+@@ -8 +6 @@ orange
+ orange,8,{+Orange+}
+@@ -9 +7 @@ strawberry
+ strawberry,9,{+Strawberry+}
+@@ -10 +8 @@ blueberry
+ blueberry,10,{+Blueberry+}
+@@ -2 +9 @@ apple
+ apple,2,{+Apple+}
+@@ -3 +10 @@ banana
+ banana,3,{+Banana+}

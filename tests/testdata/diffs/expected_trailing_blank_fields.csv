@@ -1,0 +1,9 @@
+diff2_logic_test.py -k"name" testdata/simple_quoted.csv testdata/simple_trailing_blank_fields.csv
+--- testdata/simple_quoted.csv
++++ testdata/simple_trailing_blank_fields.csv
+@@ -1 +1 @@ <Column names>
+ name,count,,{+name+},
+@@ -2 +2 @@ apple
+ apple,2,,,
+@@ -3 +3 @@ banana
+ banana,3,,,

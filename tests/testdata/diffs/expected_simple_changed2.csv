@@ -1,0 +1,5 @@
+diff2_logic_test.py -k"name" testdata/simple_quoted.csv testdata/simple_changed2.csv
+--- testdata/simple_quoted.csv
++++ testdata/simple_changed2.csv
+@@ -3 +3 @@ banana
+ banana,{-3-,+5+}

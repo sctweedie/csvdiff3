@@ -1,0 +1,7 @@
+diff2_logic_test.py -k"name" testdata/multiline.csv testdata/multiline_reorder.csv
+--- testdata/multiline.csv
++++ testdata/multiline_reorder.csv
+@@ -2 +5 @@ apple
+ apple,1
+@@ -3 +6 @@ apple
+ apple,2

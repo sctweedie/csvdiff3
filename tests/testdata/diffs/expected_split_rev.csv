@@ -1,0 +1,7 @@
+diff2_logic_test.py -k"name" testdata/split.csv testdata/simple_quoted.csv
+--- testdata/split.csv
++++ testdata/simple_quoted.csv
+@@ -2 +2 @@ apple
+ apple,{-2\nand more here-,+2+}
+@@ -3 +3 @@ banana
+ banana,{-3\nand even more-,+3+}
