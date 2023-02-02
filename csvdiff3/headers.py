@@ -123,10 +123,49 @@ class Headers:
             self.__consume1(self.A, name)
             self.__consume1(self.B, name)
 
+    # We expect a CSV file's header to be well-formed: to have a
+    # unique, non-empty name for each column.
+    #
+    # But for robustness, we want to handle badly-formed headers.  For
+    # that, we'll construct a properly-formed internal name for each
+    # column name in each header:
+    #
+    # * Empty column names are filled out as "[*unlabeled*]", and
+    # * Duplicated column names are made unique by appending them with
+    #   a [%count] suffix.
+
+    @staticmethod
+    def _uniquify(headers):
+        seen = set()
+        output = []
+        count = {}
+
+        for h in headers:
+            if h == "":
+                h = "[*unlabeled*]"
+
+            if h in seen:
+                if h not in count:
+                    count[h] = 0
+
+                count[h] = count[h] + 1
+                h = f"{h}[{count[h]}]"
+
+            else:
+                seen.add(h)
+
+            output.append(h)
+
+        return output
+
     def __init__(self, header_LCA, header_A, header_B):
         Debug = False
 
         # Store in the object itself the original lists of header names
+
+        header_LCA = self._uniquify(header_LCA)
+        header_A = self._uniquify(header_A)
+        header_B = self._uniquify(header_B)
 
         self.LCA = header_LCA
         self.A = header_A
@@ -378,7 +417,7 @@ class Headers:
     # so generate an additional map that inserts removed columns at
     # appropriate places in the map.
 
-    def map_all_headers(self, header_LCA, header_A, header_B):
+    def map_all_headers(self):
 
         def add_to_output_map(key):
             """Add a given key to the output map, also removing that key from the
@@ -398,6 +437,10 @@ class Headers:
 
             if key in left_in_map:
                 left_in_map.remove(key)
+
+        header_LCA = self.LCA
+        header_A = self.A
+        header_B = self.B
 
         all_headers = set(header_LCA) | set(header_A) | set(header_B)
         map_headers = [map.name for map in self.header_map]
