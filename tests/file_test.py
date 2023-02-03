@@ -49,6 +49,51 @@ class TestFile(unittest.TestCase):
             with self.assertRaises(KeyError):
                 lines = file.lines_by_key["plum"]
 
+    def test_file_split_open(self):
+        """
+        Test handling of deferred key setup on a simple file
+        """
+        with open(self.simple_filename, "rt") as file:
+            file = CSVFile(file)
+
+            self.assertEqual(file.header.text, "name,count\n")
+            self.assertEqual(file.header.row, ["name","count"])
+
+            file.setup_key("name")
+
+            i = iter(file)
+            line = next(i)
+            self.assertEqual(line.text, "apple,2\n")
+            self.assertEqual(line.row, ["apple","2"])
+
+            line = next(i)
+            self.assertEqual(line.text, "banana,3\n")
+            self.assertEqual(line.row, ["banana","3"])
+
+            with self.assertRaises(StopIteration):
+                line = next(i)
+
+            self.assertEqual(file[1].text, "name,count\n")
+            self.assertEqual(file[1].row, ["name","count"])
+
+            self.assertEqual(file[2].text, "apple,2\n")
+            self.assertEqual(file[2].row, ["apple","2"])
+
+            self.assertEqual(file[3].text, "banana,3\n")
+            self.assertEqual(file[3].row, ["banana","3"])
+
+            with self.assertRaises(IndexError):
+                line = file[0]
+
+            with self.assertRaises(IndexError):
+                line = file[4]
+
+            self.assertEqual(file.lines_by_key["apple"], [file[2]])
+            self.assertEqual(file.lines_by_key["banana"], [file[3]])
+
+            with self.assertRaises(KeyError):
+                lines = file.lines_by_key["plum"]
+
     def test_file_dups(self):
         """
         Test handling of a file containing 2 lines with the same key

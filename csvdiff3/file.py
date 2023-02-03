@@ -181,7 +181,7 @@ class CSVFile:
     returns/searches for lines on demand.
     """
 
-    def __init__(self, stream, key, filename = "input", **args):
+    def __init__(self, stream, key = None, filename = "input", **args):
         self.reader = CSVHeaderFile(stream, **args)
 
         self.header = self.reader.header
@@ -189,6 +189,24 @@ class CSVFile:
         self.lines = [self.header]
         self.lines_by_key = {}
         self.filename = filename
+
+        # For now we read the entire file up-front.
+        #
+        # In the future, this may be replaced with a read that
+        # searches ahead in the file only far enough to resolve
+        # reordered lines with a given window.
+
+        for count, line in enumerate(self.reader, 2):
+            self.lines.append(line)
+
+        self.last_line = len(self.lines)
+
+        if key:
+            self.setup_key(key)
+
+    def setup_key(self, key):
+
+        self.key = key
 
         if not key in self.header.row:
             # One special case: a completely empty file is not
@@ -204,19 +222,12 @@ class CSVFile:
                 self.lines = [EmptyLine()]
                 return
 
-            raise CSVKeyError(f"""key "{key}" not found in file {filename}""")
+            raise CSVKeyError(f"""key "{key}" not found in file {self.filename}""")
 
         self.key_index = self.header.row.index(next(x for x in self.header.row
                                                     if x == key))
 
-        # For now we read the entire file up-front.
-        #
-        # In the future, this may be replaced with a read that
-        # searches ahead in the file only far enough to resolve
-        # reordered lines with a given window.
-
-        for count, line in enumerate(self.reader, 2):
-            self.lines.append(line)
+        for line in self.lines:
             # If there is a short line which does not include a field
             # for the primary key column, it just gets assigned a
             # blank key
@@ -225,8 +236,6 @@ class CSVFile:
                 self.lines_by_key[key].append(line)
             else:
                 self.lines_by_key[key] = [line]
-
-        self.last_line = len(self.lines)
 
     def __iter__(self):
         for line in self.lines[1:]:
