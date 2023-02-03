@@ -170,6 +170,7 @@ class Headers:
         self.LCA = header_LCA
         self.A = header_A
         self.B = header_B
+        self.full_output_map = None
 
         # If any of the headers are differ then we will be doing
         # remapping; this will disable some exact-text-match
@@ -419,6 +420,9 @@ class Headers:
 
     def map_all_headers(self):
 
+        if self.full_output_map:
+            return self.full_output_map
+
         def add_to_output_map(key):
             """Add a given key to the output map, also removing that key from the
             list of outstanding keys in each key source"""
@@ -494,6 +498,8 @@ class Headers:
 
             next_map = left_in_map[0]
             add_to_output_map(next_map)
+
+        self.full_output_map = output_map
 
         return output_map
 
