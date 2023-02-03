@@ -20,7 +20,8 @@ from .tools.options import *
               help = "Colourise diffs in output (default is True " + \
               "if outputting to a tty)")
 @click.option("-k", "--key",
-              required=True,
+              required = False,
+              default = "[auto]",
               help = "Identifies column name for the CSV files' primary key " + \
               "(used to identify matching lines across changed files)")
 @click.option("-d", "--debug", is_flag = True, default=False,
@@ -86,7 +87,8 @@ def cli_diff2(file1, file2,
               help = "Colourise diffs in output (default is True " + \
               "if outputting to a tty)")
 @click.option("-k", "--key",
-              required=True,
+              required = False,
+              default = "[auto]",
               help = "Identifies column name for the CSV files' primary key " + \
               "(used to identify matching lines across changed files)")
 @click.option("-d", "--debug", is_flag = True, default = False,
