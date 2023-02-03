@@ -111,40 +111,52 @@ class TestFormatting(DiffTest):
         Test simple addition of new lines to a file
         """
 
-        # Add one or two lines to the file:
+        # For this simple set of tests, we'll also test primary key
+        # auto-detection including both selection of key by picking
+        # the key from a list, or by automatic guessing, or both.
 
-        self.run_and_compare(self.file_unquoted,
-                             "testdata/simple_append1.csv",
-                             "testdata/diffs/expected_simple_append1.csv",
-                             "name")
+        for key in "name", "nosuchkey|name", "[auto]", "nosuchkey|[auto]":
 
-        self.run_and_compare(self.file_unquoted,
-                             "testdata/simple_append2.csv",
-                             "testdata/diffs/expected_simple_append2.csv",
-                             "name")
+            # Add one or two lines to the file:
 
-        # Adds new lines with conflicts: adds lines that share a key
-        # with existing lines, and also modify an exiting line with
-        # the same key
+            self.run_and_compare(self.file_unquoted,
+                                 "testdata/simple_append1.csv",
+                                 "testdata/diffs/expected_simple_append1.csv",
+                                 key)
 
-        self.run_and_compare("testdata/longer.csv",
-                             "testdata/longer_dupmerge.csv",
-                             "testdata/diffs/expected_longer_dupmerge.csv",
-                             "name")
+            self.run_and_compare(self.file_unquoted,
+                                 "testdata/simple_append2.csv",
+                                 "testdata/diffs/expected_simple_append2.csv",
+                                 key)
 
-        # Inserts a completely blank new line
+            # Adds new lines with conflicts: adds lines that share a key
+            # with existing lines, and also modify an exiting line with
+            # the same key
 
-        self.run_and_compare(self.file_fully_quoted,
-                             "testdata/simple_emptyline.csv",
-                             "testdata/diffs/expected_simple_emptyline.csv",
-                             "name")
+            # (This specific test won't run correctly with auto key
+            # detection, as we deliberately include multiple lines
+            # with the same primary key but different data, so the
+            # data field looks like a better primary key.)
 
-        # And multiple blank lines
+            if "[auto]" not in key:
+                self.run_and_compare("testdata/longer.csv",
+                                     "testdata/longer_dupmerge.csv",
+                                     "testdata/diffs/expected_longer_dupmerge.csv",
+                                     key)
 
-        self.run_and_compare("testdata/multi_blank_0.csv",
-                             "testdata/multi_blank_2.csv",
-                             "testdata/diffs/expected_multi_blank.csv",
-                             "name")
+            # Inserts a completely blank new line
+
+            self.run_and_compare(self.file_fully_quoted,
+                                 "testdata/simple_emptyline.csv",
+                                 "testdata/diffs/expected_simple_emptyline.csv",
+                                 key)
+
+            # And multiple blank lines
+
+            self.run_and_compare("testdata/multi_blank_0.csv",
+                                 "testdata/multi_blank_2.csv",
+                                 "testdata/diffs/expected_multi_blank.csv",
+                                 key)
 
 
     @unittest.skipIf(Debug.skip_tests, "skipping for debug")
