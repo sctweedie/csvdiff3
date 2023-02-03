@@ -728,6 +728,128 @@ def merge_one_line(state, line_LCA, line_A, line_B):
                                          line_LCA, line_A, line_B,
                                          row)
 
+# Check whether a proposed primary key is valid for all input files.
+# The key must be present in each non-empty input file.
+
+def key_is_valid(key, file_LCA, file_A, file_B):
+    for file in file_LCA, file_A, file_B:
+        if file.reader.empty:
+            continue
+        if key not in file.header.row:
+            return False
+
+    return True
+
+def setup_primary_key(keys, headers, file_LCA, file_A, file_B):
+    """
+    Set up the primary key.  If the user has selected multiple
+    possible keys or requested automatic key guessing, we need to
+    determine the right key given the file contents.
+    """
+
+    for key in keys.split("|"):
+        if key == "[auto]":
+            key = guess_primary_key(headers, file_LCA, file_A, file_B)
+
+        if key_is_valid(key, file_LCA, file_A, file_B):
+            return key
+
+    raise PrimaryKeyError(f"Cannot find a valid primary key in {key}")
+
+def key_duplicates(key, file):
+    """
+    Return the number of duplicate values found for a candidate
+    primary key in a given input file.
+    """
+    if file.reader.empty:
+        return 0
+
+    if key not in file.header.row:
+        return 0
+
+    # Figure where this key lies in this particular input file:
+
+    column_index = file.header.row.index(next(x for x in file.header.row
+                                              if x == key))
+    key_values = set()
+
+    # Now find all the distinct values this key has in this file
+
+    lines = 0
+    for line in file.lines[2:100]:
+
+        # but don't crash on short lines that don't contain a value
+        # for this particular key.
+
+        try:
+            key_values.add(line.row[column_index])
+        except IndexError:
+            pass
+        lines += 1
+
+    duplicates = lines - len(key_values)
+
+    logging.debug(f"Found {len(key_values)} distinct values for key {key} "
+                  f"out of {lines} lines in {file.filename}: score {duplicates}")
+
+    return duplicates
+
+def guess_primary_key(headers, file_LCA, file_A, file_B):
+    """
+    Perform automatic primary key guessing given the opened input
+    files.
+
+    We look at up-to the first 100 lines of each file (currently
+    hard-coded), and select:
+
+    * the first valid key (ie. the column is present in each non-empty
+      file) that has 100% different values in each file, ie. zero
+      duplicates
+    * failing that, the key with the fewest duplicated values across
+      all files, preferring earlier columns on tie
+    """
+
+    best_score = 1000
+    best_key = None
+    first_over_threshold = None
+
+    logging.debug(f"Key guessing: starting to guess")
+    for key in [x.name for x in headers.map_all_headers()]:
+        logging.debug(f'Key guessing: trying key "{key}"')
+
+        if not key_is_valid(key, file_LCA, file_A, file_B):
+            continue
+
+        # We want the key to be as good as possible over all the input
+        # files, so we simply add the scores for each individual file.
+
+        score = 0
+        for file in file_LCA, file_A, file_B:
+            score = score + key_duplicates(key, file)
+
+        # If the key had no duplicates in any file, the key is perfect, so just use it.
+
+        if score == 0:
+            return key
+
+        # Chose a new best-so-far key if the new key is *strictly*
+        # better than all previous ones.  On tie, we always chose the
+        # earlier key.
+
+        if score < best_score:
+            best_score = score
+            best_key = key
+
+        #if score > 90 and not first_over_threshold:
+        #    first_over_threshold = key
+
+    if first_over_threshold:
+        return first_over_threshold
+    if best_key:
+        return best_key
+
+    raise PrimaryKeyError(f"Cannot guess a valid primary key")
+
 def merge3(file_lca, file_a, file_b, key,
            output = sys.stdout,
            debug = True,
@@ -748,13 +870,19 @@ def merge3(file_lca, file_a, file_b, key,
         logging.basicConfig(filename = "DEBUG.log", level = logging.DEBUG)
         logging.debug("Started new run.")
 
-    file_LCA = CSVFile(file_lca, key=key, filename = filename_LCA)
-    file_A = CSVFile(file_a, key=key, filename = filename_A)
-    file_B = CSVFile(file_b, key=key, filename = filename_B)
+    file_LCA = CSVFile(file_lca, filename = filename_LCA)
+    file_A = CSVFile(file_a, filename = filename_A)
+    file_B = CSVFile(file_b, filename = filename_B)
 
     headers = Headers(file_LCA.header.row,
                       file_A.header.row,
                       file_B.header.row)
+
+    key = setup_primary_key(key, headers, file_LCA, file_A, file_B)
+
+    file_LCA.setup_key(key)
+    file_A.setup_key(key)
+    file_B.setup_key(key)
 
     # Always reformat all output lines if the headers have changed at
     # all between files
