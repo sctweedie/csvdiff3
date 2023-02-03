@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="csvdiff3",
-    version="0.99.7",
+    version="0.99.8",
     author="Stephen Tweedie",
     author_email="sct@redhat.com",
     description="3-way CSV file merging utility",
