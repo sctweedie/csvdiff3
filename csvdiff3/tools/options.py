@@ -7,6 +7,12 @@
 import csv
 import os
 
+class MergeFailedError(Exception):
+    def __init__(self, message, *args):
+        self.message = message
+
+        super(MergeFailedError, self).__init__(message, *args)
+
 class Options:
     def __init__(self, quote = None, key = None, lineterminator = None):
         self.quote = quote

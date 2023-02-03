@@ -11,6 +11,7 @@ import colorama
 from .merge3 import merge3
 from .output import Diff2OutputDriver
 from .file import CSVKeyError
+from .tools.options import *
 
 @click.command()
 
@@ -54,7 +55,7 @@ def cli_diff2(file1, file2,
                                 output_driver_class = Diff2OutputDriver,
                                 output_args = output_args,
                                 filename_LCA = file1, filename_A = file2, filename_B = file2)
-                except CSVKeyError as e:
+                except MergeFailedError as e:
                     print(f"{os.path.basename(sys.argv[0])}: Error: {e.message}", file=sys.stdout)
                     sys.exit(1)
 
@@ -141,7 +142,7 @@ def cli_diff2_git(file_common_name,
                                 output_driver_class = Diff2OutputDriver,
                                 output_args = output_args,
                                 filename_LCA = old_file, filename_A = new_file, filename_B = new_file)
-                except CSVKeyError as e:
+                except MergeFailedError as e:
                     print(f"{os.path.basename(sys.argv[0])}: Error: {e.message}", file=sys.stdout)
                     sys.exit(1)
 

@@ -11,14 +11,15 @@ from colorama import Fore, Style
 
 from .file import *
 from .headers import Headers
-from .tools.options import Options
+from .tools.options import *
 from .output import Merge3OutputDriver
 
 class ConflictError(Exception):
     pass
 
-class UnhandledError(Exception):
-    pass
+class PrimaryKeyError(MergeFailedError):
+    def __init__(self, message, *args):
+        super(PrimaryKeyError, self).__init__(message, *args)
 
 class __State:
     def __init__(self, file_LCA, file_A, file_B,

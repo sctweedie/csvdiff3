@@ -122,7 +122,7 @@ class TestFile(unittest.TestCase):
         Test handling of a file that does not contain the key
         """
         with open(self.simple_filename, "rt") as file:
-            with self.assertRaises(KeyError):
+            with self.assertRaises(CSVKeyError):
                 file = CSVFile(file, "notmyname")
 
     def test_splitline(self):

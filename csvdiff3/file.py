@@ -13,6 +13,7 @@ import logging
 import shutil
 from orderedmultidict import omdict
 from collections import UserString
+from .tools.options import MergeFailedError
 
 # Define a custom string type that always evaluates to True when cast
 # to boolean.
@@ -167,10 +168,8 @@ class CSVHeaderFile:
             yield Line(line, row, linenr)
             linenr += 1
 
-class CSVKeyError(KeyError):
+class CSVKeyError(MergeFailedError):
     def __init__(self, message, *args):
-        self.message = message
-
         super(CSVKeyError, self).__init__(message, *args)
 
 class CSVFile:
