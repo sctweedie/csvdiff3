@@ -95,15 +95,26 @@ class TestFormatting(DiffTest):
         empty diff, regardless of quoting patterns or line termination
         used
         """
-        for file1 in [self.file_unquoted,
-                      self.file_partially_quoted,
-                      self.file_fully_quoted,
-                      self.file_dos]:
-            for file2 in [self.file_unquoted,
+
+        for key in "name", "nosuchkey|name", "[auto]", "nosuchkey|[auto]":
+
+            # Test different ways of quoting the same content...
+
+            for file1 in [self.file_unquoted,
                           self.file_partially_quoted,
                           self.file_fully_quoted,
                           self.file_dos]:
-                self.run_and_compare(file1, file2, self.file_empty, "name")
+                for file2 in [self.file_unquoted,
+                              self.file_partially_quoted,
+                              self.file_fully_quoted,
+                              self.file_dos]:
+                    self.run_and_compare(file1, file2, self.file_empty, key)
+
+            # And also test that we can compare two completely empty
+            # files.  Any primary key should work in this case, and
+            # auto key guessing should also handle it successfully.
+
+            self.run_and_compare(self.file_empty, self.file_empty, self.file_empty, key)
 
     @unittest.skipIf(Debug.skip_tests, "skipping for debug")
     def test_add_lines(self):
