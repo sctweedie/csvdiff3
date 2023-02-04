@@ -809,6 +809,21 @@ def guess_primary_key(headers, file_LCA, file_A, file_B):
       all files, preferring earlier columns on tie
     """
 
+    # First handle a special case.  If all inputs are empty, then
+    # there are no potential primary keys present, so there's simply
+    # no point in trying to guess which one is best.
+    #
+    # But at the same time, every possible primary key is compatible
+    # with all of the input files; there's no data to be incompatible
+    # with.
+    #
+    # So, just generate a fake primary key as our guess, using a
+    # string that is easily identifiable if it turns up in a crash
+    # report.
+
+    if file_LCA.reader.empty and file_A.reader.empty and file_B.reader.empty:
+        return "[nokeyspresent]"
+
     best_score = 1000
     best_key = None
     first_over_threshold = None
