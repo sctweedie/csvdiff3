@@ -3,6 +3,9 @@ import re
 import csv
 import sys
 import os
+import difflib
+import re
+from functools import reduce
 
 class OutputDriver():
     """
@@ -357,15 +360,45 @@ class Diff2OutputDriver(OutputDriver):
                                   f"-{self.quote_newlines(val_LCA)}-" +
                                   state.text_reset() + "}")
             else:
+                (old,new) = self.highlight_word_diff(state,
+                                                     self.quote_newlines(val_LCA),
+                                                     self.quote_newlines(val_A))
                 fields.append("{" + state.text_red() +
-                              f"-{self.quote_newlines(val_LCA)}-" +
+                              f"-{old}-" +
                               state.text_reset() + "," +
                               state.text_green() +
-                              f"+{self.quote_newlines(val_A)}+" +
+                              f"+{new}+" +
                               state.text_reset() + "}")
 
         line = ",".join(fields)
         return (line, modified)
+
+    word_split_pattern = re.compile(r"(\W+)")
+
+    def highlight_word_diff(self, state, old, new):
+        old_words = self.word_split_pattern.split(old)
+        new_words = self.word_split_pattern.split(new)
+
+        opcodes = difflib.SequenceMatcher(a=old_words, b=new_words).get_opcodes()
+        old_output = ""
+        new_output = ""
+
+        for tag,i1,i2,j1,j2 in opcodes:
+            if tag == "replace" or tag == "delete":
+                old_output += (state.text_bold() +
+                               reduce(str.__add__, old_words[i1:i2]) +
+                               state.text_unbold())
+            elif tag == "equal":
+                old_output += reduce(str.__add__, old_words[i1:i2])
+
+            if tag == "replace" or tag == "insert":
+                new_output += (state.text_bold() +
+                               reduce(str.__add__, new_words[j1:j2]) +
+                               state.text_unbold())
+            elif tag == "equal":
+                new_output += reduce(str.__add__, new_words[j1:j2])
+
+        return (old_output, new_output)
 
     def emit_csv_row(self, state, line_LCA, line_A, line_B, row, row_key = None):
         key = row_key or state.cursor_A.current_key()

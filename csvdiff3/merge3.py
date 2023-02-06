@@ -79,6 +79,9 @@ class __State:
     def text_bold(self):
         return self.text_if_colour_enabled(Style.BRIGHT)
 
+    def text_unbold(self):
+        return self.text_if_colour_enabled(Style.NORMAL)
+
     def text_reset(self):
         return self.text_if_colour_enabled(Style.RESET_ALL)
 
