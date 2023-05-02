@@ -7,175 +7,34 @@ import difflib
 import re
 from functools import reduce
 
-from colorama import Fore, Style
+from .output import OutputDriver
 
-class OutputDriver():
-    """
-    Abstract Base Class for merge output drivers.
-
-    The merge3 run will output its merge results to an instance of an
-    OutputDriver; the exact subclass chosen can format the output as
-    it wishes, eg. to define the formatting of conflict blocks in a
-    3-way merge or to present the results as a 2- or 3-way diff.
-    """
-
+class Diff2MarkdownOutputDriver(OutputDriver):
     class ColorMapper:
-        RED = Fore.RED
-        GREEN = Fore.GREEN
-        CYAN = Fore.CYAN
+        RED = "${\\color{red}\\textsf{"
+        GREEN = "${\\color{green}\\textsf{"
+        CYAN = "${\\color{lightblue}\\textsf{"
 
-        STYLE_BRIGHT = Style.BRIGHT
-        STYLE_NORMAL = Style.NORMAL
-        STYLE_RESET_ALL = Style.RESET_ALL
+        STYLE_BRIGHT = "\\textbf{"
+        STYLE_NORMAL = "}"
+        STYLE_RESET_ALL = "}}$"
 
-    def __init__(self, stream, dialect_args, *args, **kwargs):
-        self.stream = stream
-        self.dialect_args = dialect_args
-
-    def emit_preamble(self, state, options, file_LCA, file_A, file_B, file_common_name):
-        pass
-
-    @abstractmethod
-    def emit_text(self, state, line_LCA, line_A, line_B, text):
-        """
-        Emit a line of merged text.
-
-        The text will reflect the final result of merge; if a line in
-        LCA has been deleted entirely, the text will have the value
-        None.
-
-        The line_LCA, line_A and line_B will all represent lines being
-        merged for this row.  They may be absent: for a newly-added
-        line, line_LCA will be None; and for deleted lines, line_A or
-        line_B (or both) will be None.  But any lines presented will
-        have the same key and will have been merged by the time this
-        method is called.
-        """
-        pass
-
-    @abstractmethod
-    def emit_csv_row(self, state, line_LCA, line_A, line_B, row, row_key = None):
-        """
-        Emit a row of merged CSV.
-
-        We emit merges as CSV rows, rather than text, either:
-
-        * when reformat_all is set (in which case we want to re-write
-          the CSV entirely to refresh field quoting, or
-
-        * when a 3-way merge has been required, so that we cannot use
-          either the A or B original text verbatim.
-        """
-        pass
-
-    @abstractmethod
-    def emit_conflicts(self, state, line_LCA, line_A, line_B, conflicts):
-        """
-        Emit a row with conflicts.
-
-        The conflicts object will include a list of those fields which
-        could not be automatically merged, ie. which had conflicting
-        updates in A and B."""
-        pass
-
-    # Some common helper functions to assist output drivers with formatting
-
-    newline_regexp = re.compile("\n|\r\n")
+    def __init__(self, *args, **kwargs):
+        OutputDriver.__init__(self, *args, **kwargs)
+        self.show_reordered_lines = kwargs['show_reordered_lines']
+        self.preamble_extra_text = kwargs['preamble_extra_text']
 
     @staticmethod
     def quote_newlines(text, replacement = "\\\\n"):
         """
         Prepare a key for printing, replacing any EOL/newline
-        sequences with "\n" to keep the output on a single line.
-        """
-        return OutputDriver.newline_regexp.sub(replacement, format(text))
-
-
-class Merge3OutputDriver(OutputDriver):
-    def __init__(self, *args, **kwargs):
-        OutputDriver.__init__(self, *args, **kwargs)
-        self.writer = csv.writer(self.stream, **self.dialect_args)
-
-    def emit_text(self, state, line_LCA, line_A, line_B, text):
-        # Do nothing if there is no text in the merged output
-        # (ie. this line has been deleted.)
-        if not text:
-            return
-        self.stream.write(text)
-
-    def emit_csv_row(self, state, line_LCA, line_A, line_B, row, row_key = None):
-        # Do nothing if there is no content in the merged output
-        # (ie. this line has been deleted.)
-        if not row:
-            return
-        self.writer.writerow(row)
-        pass
-
-    def emit_conflicts(self, state, line_LCA, line_A, line_B, conflicts):
-        """
-        Write a set of conflicts for a single line to the output.
+        sequences with "\n" to keep the output on a single line
+        and escaping markdown symbols.
         """
 
-        # Side A first
+        text = text.replace("|", "\\|")
 
-        linestr = ">>>>>> %s %s\n" % \
-            (state.cursor_A.file.filename,
-             self.line_to_str(conflicts.line_A, state.cursor_LCA, state.cursor_A))
-        self.stream.write(linestr)
-
-        for c in conflicts:
-            linestr = ">>>>>> %s = %s%s%s\n" % \
-                (c.column.name,
-                 state.text_red(),
-                 self.quote_newlines(c.val_A),
-                 state.text_reset()
-                )
-            self.stream.write(linestr)
-
-        if conflicts.line_A:
-            self.stream.write(state.text_red())
-            self.stream.write(conflicts.line_A.text)
-            self.stream.write(state.text_reset())
-
-        # Side B next
-
-        linestr = "====== %s %s\n" % \
-            (state.cursor_B.file.filename,
-             self.line_to_str(conflicts.line_B, state.cursor_LCA, state.cursor_B))
-        self.stream.write(linestr)
-
-        for c in conflicts:
-            linestr = "====== %s = %s%s%s\n" % \
-                (c.column.name,
-                 state.text_green(),
-                 self.quote_newlines(c.val_B),
-                 state.text_reset()
-                )
-            self.stream.write(linestr)
-
-        if conflicts.line_B:
-            self.stream.write(state.text_green())
-            self.stream.write(conflicts.line_B.text)
-            self.stream.write(state.text_reset())
-
-        self.stream.write(state.text_reset())
-        linestr = "<<<<<<\n"
-
-        self.stream.write(linestr)
-
-    @staticmethod
-    def line_to_str(line, cursor_LCA, cursor_line):
-        if not line:
-            return "Deleted @%d" % cursor_LCA.linenr
-        return "@%d (%s)" % (line.linenr, line.row[cursor_line.file.key_index])
-
-
-
-class Diff2OutputDriver(OutputDriver):
-    def __init__(self, *args, **kwargs):
-        OutputDriver.__init__(self, *args, **kwargs)
-        self.show_reordered_lines = kwargs['show_reordered_lines']
-        self.preamble_extra_text = kwargs['preamble_extra_text']
+        return OutputDriver.quote_newlines(text, replacement)
 
     def emit_preamble(self, state, options, file_LCA, file_A, file_B, file_common_name):
         # For 2-way diff we start the output with a standard
@@ -198,9 +57,9 @@ class Diff2OutputDriver(OutputDriver):
         # find no diffs to print; it will get printed the first time
         # we find there's something else to emit.
 
-        self.saved_preamble = (state.text_bold() +
+        self.saved_preamble = ("$" + state.text_bold() +
                                f"{name} -k\"{key}\" " +
-                               f"{file1} {file2}\n")
+                               f"{file1} {file2}" + state.text_unbold() + "$\n\n")
 
         # If we have extra preamble text, we always emit it
         # immediately after the cmdline (to be consistent with "git
@@ -211,14 +70,19 @@ class Diff2OutputDriver(OutputDriver):
             self.flush_preamble()
 
             for line in self.preamble_extra_text.strip().split("\n"):
-                self.stream.write(state.text_bold() +
-                                  line + "\n")
+                self.stream.write("$" + state.text_bold() +
+                                  line + state.text_unbold() + "$\n")
 
-        self.saved_preamble += (state.text_bold() +
-                                f"--- {file1}\n" +
-                                state.text_bold() +
-                                f"+++ {file2}\n" +
-                                state.text_reset())
+        self.saved_preamble += ("$" + state.text_bold() +
+                                f"--- {file1}" + state.text_unbold() + "$\n" +
+                                "$" + state.text_bold() +
+                                f"+++ {file2}" + state.text_unbold() + "$\n"
+                                "\n")
+
+        self.saved_preamble += ("| " +
+            " | ".join(" " for _ in self.all_headers) + " |\n|-" +
+            "-|-".join("-" for _ in self.all_headers) + "-|\n"
+        )
 
     def flush_preamble(self):
         if not self.saved_preamble:
@@ -232,19 +96,19 @@ class Diff2OutputDriver(OutputDriver):
         Write diff-specific line number information, indicating if a line
         has been added, removed or reordered
         """
-        key_text = state.text_bold() + key + state.text_reset()
+        key_text = "$" + state.text_bold() + key + state.text_unbold() + "$"
 
         if not line_LCA:
             # Line has been added
-            self.stream.write(f"{state.text_cyan()}@@ +{line_A.linenr} @@" +
-                              f"{state.text_reset()} {key_text}\n")
+            self.stream.write(f"| {state.text_cyan()} +{line_A.linenr} " +
+                              f"{state.text_reset()} | {key_text} |\n")
         elif not line_A:
             # Line has been deleted
-            self.stream.write(f"{state.text_cyan()}@@ -{line_LCA.linenr} @@" +
-                              f"{state.text_reset()} {key_text}\n")
+            self.stream.write(f"| {state.text_cyan()} -{line_LCA.linenr} " +
+                              f"{state.text_reset()} | {key_text} |\n")
         else:
-            self.stream.write(f"{state.text_cyan()}@@ -{line_LCA.linenr} " +
-                              f"+{line_A.linenr} @@{state.text_reset()} {key_text}\n")
+            self.stream.write(f"| {state.text_cyan()} -{line_LCA.linenr} {state.text_reset()} " +
+                              f"{state.text_cyan()} +{line_A.linenr} {state.text_reset()} | {key_text} |\n")
 
     def emit_text(self, state, line_LCA, line_A, line_B, text):
         # We emit text, rather than rows, when there is no merging to
@@ -286,20 +150,20 @@ class Diff2OutputDriver(OutputDriver):
             # Show out-of-order lines in normal colour
             line = line_LCA
             colour = ""
-            prefix = " "
+            prefix = "| |"
             key = state.cursor_A.current_key()
 
         elif not line_A:
             # For deleted lines, we need to write the old text, not the
             # new.
-            line = line_LCA
+            line = line_LCA.replace("_", "\\\\_")
             colour = state.text_red()
-            prefix = "-"
+            prefix = "| - |"
             key = state.cursor_LCA.current_key()
         else:
-            line = line_A
+            line = line_A.replace("_", "\\\\_")
             colour = state.text_green()
-            prefix = "+"
+            prefix = "| + |"
             key = state.cursor_A.current_key()
 
         self.flush_preamble()
@@ -309,12 +173,13 @@ class Diff2OutputDriver(OutputDriver):
         # but the full-line text will also have a trailing newline
         # that we need to remove first.
 
-        text = ",".join(map(self.quote_newlines, line.row))
+        text = " | ".join(map(self.quote_newlines, line.row))
 
-        self.stream.write(prefix + colour + text + state.text_reset() + "\n")
+        self.stream.write(prefix + colour + text + state.text_reset() + "| \n")
 
     def _row_to_text(self, state, line_LCA, line_A):
-        fields = []
+        top_fields = []
+        bottom_fields = []
         modified = False
         for field in self.all_headers:
             # Columns may be added/removed so record which ones we
@@ -344,7 +209,8 @@ class Diff2OutputDriver(OutputDriver):
             # deleted line, but when the columns have also changed.)
 
             if val_LCA == val_A or line_LCA == line_A:
-                fields.append(self.quote_newlines(val_A))
+                top_fields.append(self.quote_newlines(val_A))
+                bottom_fields.append("")
                 continue
 
             modified = True
@@ -355,33 +221,36 @@ class Diff2OutputDriver(OutputDriver):
                     # contains no data for that new column, don't emit
                     # a change field for that: it just clutters the
                     # output, especially when many lines are affected.
-                    fields.append("")
+                    bottom_fields.append("")
                 else:
-                    fields.append("{" + state.text_green() +
+                    bottom_fields.append(state.text_green() +
                                   f"+{self.quote_newlines(val_A)}+" +
-                                  state.text_reset() + "}")
+                                  state.text_reset())
+                top_fields.append("")
             elif val_A == None:
                 if val_LCA == "":
                     # Likewise skip the change field when deleting a
                     # column if a line previously had no data for that
                     # column
-                    fields.append("")
+                    top_fields.append("")
                 else:
-                    fields.append("{" + state.text_red() +
+                    top_fields.append(state.text_red() +
                                   f"-{self.quote_newlines(val_LCA)}-" +
-                                  state.text_reset() + "}")
+                                  state.text_reset())
+                bottom_fields.append("")
             else:
                 (old,new) = self.highlight_word_diff(state,
                                                      self.quote_newlines(val_LCA),
                                                      self.quote_newlines(val_A))
-                fields.append("{" + state.text_red() +
+                top_fields.append(state.text_red() +
                               f"-{old}-" +
-                              state.text_reset() + "," +
-                              state.text_green() +
+                              state.text_reset())
+                bottom_fields.append(state.text_green() +
                               f"+{new}+" +
-                              state.text_reset() + "}")
+                              state.text_reset())
 
-        line = ",".join(fields)
+        line = "| " + " | ".join(top_fields) + " |\n| " + " | ".join(bottom_fields) + " |"
+        line = re.sub("(.t?tps?)://", r"\1&#8203;://", line).replace("_", "\\\\_")
         return (line, modified)
 
     word_split_pattern = re.compile(r"(\W+)")
@@ -449,7 +318,7 @@ class Diff2OutputDriver(OutputDriver):
         self.flush_preamble()
         self.emit_line_numbers(state, line_LCA, line_A, key)
 
-        self.stream.write(" " + text + "\n")
+        self.stream.write(text + "\n")
 
     def emit_conflicts(self, state, line_LCA, line_A, line_B, conflicts):
         # A 2-way diff should never be able to produce conflicts!

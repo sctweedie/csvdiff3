@@ -10,6 +10,7 @@ import colorama
 
 from .merge3 import merge3
 from .output import Diff2OutputDriver
+from .output_md import Diff2MarkdownOutputDriver
 from .file import CSVKeyError
 from .tools.options import *
 
@@ -28,12 +29,16 @@ from .tools.options import *
               help = "Enable logging in DEBUG.log")
 @click.option("-r", "--show-reordered-lines", is_flag = True, default = False,
               help = "Show unchanged but reordered lines")
+@click.option("-m", "--markdown", is_flag = True, default = False,
+              help = "Show output as markdown")
 @click.argument("file1", type=click.Path(exists = True))
 @click.argument("file2", type=click.Path(exists = True))
+@click.argument("file3", type=click.Path(exists = True), default=None)
 
-def cli_diff2(file1, file2,
+def cli_diff2(file1, file2, file3,
               colour, key,
-              debug, show_reordered_lines):
+              debug, show_reordered_lines,
+              markdown):
 
     colorama.init()
 
@@ -47,15 +52,15 @@ def cli_diff2(file1, file2,
         # For 2-way diff, we just present the same file for
         # both A and B.
         with open(file2, "rt") as file_A:
-            with open(file2, "rt") as file_B:
+            with open(file3 or file2, "rt") as file_B:
                 try:
                     rc = merge3(file_LCA, file_A, file_B, key,
                                 debug = debug,
                                 colour = colour,
                                 reformat_all = False,
-                                output_driver_class = Diff2OutputDriver,
+                                output_driver_class = (Diff2MarkdownOutputDriver if markdown else Diff2OutputDriver),
                                 output_args = output_args,
-                                filename_LCA = file1, filename_A = file2, filename_B = file2)
+                                filename_LCA = file1, filename_A = file2, filename_B = file3 or file2)
                 except MergeFailedError as e:
                     print(f"{os.path.basename(sys.argv[0])}: Error: {e.message}", file=sys.stdout)
                     sys.exit(1)

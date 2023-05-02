@@ -7,8 +7,6 @@ import re
 import random
 import string
 
-from colorama import Fore, Style
-
 from .file import *
 from .headers import Headers
 from .tools.options import *
@@ -68,22 +66,22 @@ class __State:
         return text
 
     def text_red(self):
-        return self.text_if_colour_enabled(Fore.RED)
+        return self.text_if_colour_enabled(self.output_driver.ColorMapper.RED)
 
     def text_green(self):
-        return self.text_if_colour_enabled(Fore.GREEN)
+        return self.text_if_colour_enabled(self.output_driver.ColorMapper.GREEN)
 
     def text_cyan(self):
-        return self.text_if_colour_enabled(Fore.CYAN)
+        return self.text_if_colour_enabled(self.output_driver.ColorMapper.CYAN)
 
     def text_bold(self):
-        return self.text_if_colour_enabled(Style.BRIGHT)
+        return self.text_if_colour_enabled(self.output_driver.ColorMapper.STYLE_BRIGHT)
 
     def text_unbold(self):
-        return self.text_if_colour_enabled(Style.NORMAL)
+        return self.text_if_colour_enabled(self.output_driver.ColorMapper.STYLE_NORMAL)
 
     def text_reset(self):
-        return self.text_if_colour_enabled(Style.RESET_ALL)
+        return self.text_if_colour_enabled(self.output_driver.ColorMapper.STYLE_RESET_ALL)
 
     @staticmethod
     def dump_one_cursor(name, cursor):
