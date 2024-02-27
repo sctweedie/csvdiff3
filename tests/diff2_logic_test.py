@@ -5,7 +5,7 @@ import os
 import filecmp
 
 from csvdiff3 import merge3
-from output import Diff2OutputDriver
+from csvdiff3.output import Diff2OutputDriver
 
 class Debug:
     # Set this true to disable all tests; a single test can then be
